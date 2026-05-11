@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model administrador {
+  cuil             Int               @id(map: "cuil") @default(autoincrement())
+  id_estudio       Int?
+  estudio_contable estudio_contable? @relation(fields: [id_estudio], references: [id_estudio], onDelete: NoAction, onUpdate: NoAction, map: "id_estudio")
+  turno            turno[]
+}
+
+model cliente {
+  cuil             Int               @id @default(autoincrement())
+  id_estudio       Int?
+  estudio_contable estudio_contable? @relation(fields: [id_estudio], references: [id_estudio], onDelete: NoAction, onUpdate: NoAction, map: "id_estudio")
+  inscripto_en     inscripto_en?
+  liquidacion      liquidacion[]
+  turno            turno[]
+}
+
+model comprobante {
+  numero_boleta  Int           @id @default(autoincrement())
+  periodo_fiscal DateTime?     @db.Date
+  importe        Float?        @db.Real
+  liquidacion    liquidacion[]
+}
+
+model entidad_tributaria {
+  id_entidad   Int            @id @default(autoincrement())
+  nombre       String?
+  url          String?
+  inscripto_en inscripto_en[]
+}
+
+model estudio_contable {
+  id_estudio    Int             @id @default(autoincrement())
+  administrador administrador[]
+  cliente       cliente[]
+}
+
+model impuesto {
+  id_impuesto Int           @id @default(autoincrement())
+  formato     String?
+  liquidacion liquidacion[]
+}
+
+model inscripto_en {
+  clave              String?
+  cuil_cliente       Int                 @id @default(autoincrement())
+  id_entidad         Int?
+  cliente            cliente             @relation(fields: [cuil_cliente], references: [cuil], onDelete: NoAction, onUpdate: NoAction, map: "cuil_cliente")
+  entidad_tributaria entidad_tributaria? @relation(fields: [id_entidad], references: [id_entidad], onDelete: NoAction, onUpdate: NoAction, map: "id_entidad")
+}
+
+model liquidacion {
+  numero_boleta             Int          @id @default(autoincrement())
+  periodo_fiscal            DateTime?    @db.Date
+  importe                   Float?       @db.Real
+  estado                    String?
+  cuil_cliente              Int?
+  id_impuesto               Int?
+  numero_boleta_comprobante Int?
+  cliente                   cliente?     @relation(fields: [cuil_cliente], references: [cuil], onDelete: NoAction, onUpdate: NoAction, map: "cuil_cliente")
+  impuesto                  impuesto?    @relation(fields: [id_impuesto], references: [id_impuesto], onDelete: NoAction, onUpdate: NoAction, map: "id_impuesto")
+  comprobante               comprobante? @relation(fields: [numero_boleta_comprobante], references: [numero_boleta], onDelete: NoAction, onUpdate: NoAction, map: "numero_boleta")
+}
+
+model playing_with_neon {
+  id    Int    @id @default(autoincrement())
+  name  String
+  value Float? @db.Real
+}
+
+model turno {
+  fecha         DateTime       @db.Date
+  hora          DateTime       @db.Time(0)
+  cuil_admin    Int?
+  cuil_cliente  Int?
+  administrador administrador? @relation(fields: [cuil_admin], references: [cuil], onDelete: NoAction, onUpdate: NoAction, map: "cuil_admin")
+  cliente       cliente?       @relation(fields: [cuil_cliente], references: [cuil], onDelete: NoAction, onUpdate: NoAction, map: "cuil_cliente")
+
+  @@id([fecha, hora], map: "pk_turno")
+}
+
+model usuario {
+  CUIL_usuario     Int     @id @default(autoincrement())
+  nombre_usuario   String?
+  apellido_usuario String?
+  email            String?
+  telefono         Int?
+}
