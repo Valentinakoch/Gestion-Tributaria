@@ -1,3 +1,6 @@
+import Link from "next/link";
+import UserMenu from "./user-menu";
+
 export default function Home() {
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
@@ -10,6 +13,7 @@ export default function Home() {
           <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
             <span className="rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800">Estudio Contable</span>
             <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700 dark:bg-emerald-900">Cliente activo</span>
+            <UserMenu />
           </div>
         </div>
       </header>
@@ -22,11 +26,11 @@ export default function Home() {
               <p className="mt-3 text-lg font-semibold">Gestión tributaria</p>
             </div>
             <nav className="space-y-2 text-sm">
-              <div className="rounded-2xl bg-slate-100 px-4 py-3 text-slate-900 dark:bg-slate-950/80 dark:text-slate-100">Inicio</div>
-              <div className="rounded-2xl px-4 py-3 text-slate-600 dark:text-slate-300">Situación impositiva</div>
-              <div className="rounded-2xl px-4 py-3 text-slate-600 dark:text-slate-300">Boletas y VEP</div>
-              <div className="rounded-2xl px-4 py-3 text-slate-600 dark:text-slate-300">Comprobantes</div>
-              <div className="rounded-2xl px-4 py-3 text-slate-600 dark:text-slate-300">Clientes</div>
+              <Link href="/" className="block rounded-2xl bg-slate-100 px-4 py-3 text-slate-900 transition hover:bg-slate-200 dark:bg-slate-950/80 dark:text-slate-100 dark:hover:bg-slate-950">Inicio</Link>
+              <Link href="/#" className="block rounded-2xl px-4 py-3 text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Situación impositiva</Link>
+              <Link href="/#" className="block rounded-2xl px-4 py-3 text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Boletas y VEP</Link>
+              <Link href="/#" className="block rounded-2xl px-4 py-3 text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Comprobantes</Link>
+              <Link href="/#" className="block rounded-2xl px-4 py-3 text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Clientes</Link>
             </nav>
           </div>
         </aside>
