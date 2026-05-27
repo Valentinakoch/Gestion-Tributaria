@@ -10,11 +10,10 @@ async function insertUsuario(
   nombre: string | null,
   apellido: string | null,
   email: string | null,
-  telefono: number | null,
+  telefono: string | null,
 ) {
   await prisma.$executeRawUnsafe(
     `INSERT INTO "usuario" ("CUIL_usuario", "nombre_usuario", "apellido_usuario", "email", "telefono")
-     OVERRIDING SYSTEM VALUE
      VALUES ($1, $2, $3, $4, $5)`,
     BigInt(cuil),
     nombre,
@@ -78,14 +77,14 @@ async function main() {
 
   console.log("Creando clientes...");
   const clientesData = [
-    { cuil: "20123456781", nombre: "Carlos", apellido: "López", email: "carlos.lopez@email.com", telefono: 1123456781 },
-    { cuil: "20234567892", nombre: "María", apellido: "García", email: "maria.garcia@email.com", telefono: 1123456792 },
-    { cuil: "20345678903", nombre: "Juan", apellido: "Pérez", email: "juan.perez@email.com", telefono: 1145678903 },
-    { cuil: "20456789014", nombre: "Ana", apellido: "Martínez", email: "ana.martinez@email.com", telefono: 1156789014 },
-    { cuil: "20567890125", nombre: "Pedro", apellido: "Rodríguez", email: "pedro.rodriguez@email.com", telefono: 1167890125 },
-    { cuil: "20678901236", nombre: "Laura", apellido: "Fernández", email: "laura.fernandez@email.com", telefono: 1178901236 },
-    { cuil: "20789012347", nombre: "Diego", apellido: "González", email: "diego.gonzalez@email.com", telefono: 1189012347 },
-    { cuil: "20890123458", nombre: "Sofía", apellido: "Díaz", email: "sofia.diaz@email.com", telefono: 1190123458 },
+    { cuil: "20123456781", nombre: "Carlos", apellido: "López", email: "carlos.lopez@email.com", telefono: "1123456781" },
+    { cuil: "20234567892", nombre: "María", apellido: "García", email: "maria.garcia@email.com", telefono: "1123456792" },
+    { cuil: "20345678903", nombre: "Juan", apellido: "Pérez", email: "juan.perez@email.com", telefono: "1145678903" },
+    { cuil: "20456789014", nombre: "Ana", apellido: "Martínez", email: "ana.martinez@email.com", telefono: "1156789014" },
+    { cuil: "20567890125", nombre: "Pedro", apellido: "Rodríguez", email: "pedro.rodriguez@email.com", telefono: "1167890125" },
+    { cuil: "20678901236", nombre: "Laura", apellido: "Fernández", email: "laura.fernandez@email.com", telefono: "1178901236" },
+    { cuil: "20789012347", nombre: "Diego", apellido: "González", email: "diego.gonzalez@email.com", telefono: "1189012347" },
+    { cuil: "20890123458", nombre: "Sofía", apellido: "Díaz", email: "sofia.diaz@email.com", telefono: "1190123458" },
   ];
 
   for (const c of clientesData) {

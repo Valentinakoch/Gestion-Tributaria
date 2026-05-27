@@ -74,11 +74,11 @@ model liquidacion {
 }
 
 model usuario {
-  CUIL_usuario     BigInt         @id @default(autoincrement())
+  CUIL_usuario     BigInt         @id
   nombre_usuario   String?
   apellido_usuario String?
-  email            String?
-  telefono         Int?
+  email            String?        @unique
+  telefono         String?
   administrador    administrador?
   cliente          cliente?
 }
@@ -89,6 +89,7 @@ model clerk_user {
   firstName String?
   lastName  String?
   cuil      String?
+  rol       String?
   createdAt DateTime @default(now())
 }
 

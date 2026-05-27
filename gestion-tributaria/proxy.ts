@@ -35,6 +35,7 @@ export const config = {
   matcher: [
     '/',                  // Escucha la landing page
     '/dashboard/:path*',  // Escucha todo el panel privado
+    '/seleccionar-rol',   // Escucha la selección de rol
     '/sign-in/:path*',    // Escucha el login
     '/sign-up/:path*',    // Escucha el registro
     '/api/:path*'         // Escucha tus rutas de backend internas

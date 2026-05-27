@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { saveCuil } from "@/actions";
+import { User, Info, Loader2 } from "lucide-react";
 
 interface CuilSetupProps {
   userName: string;
@@ -12,6 +13,20 @@ export default function CuilSetup({ userName }: CuilSetupProps) {
   const router = useRouter();
   const [cuil, setCuil] = useState("");
   const [status, setStatus] = useState<{ type: "idle" | "saving" | "success" | "error"; message?: string }>({ type: "idle" });
+
+  function formatCuil(raw: string): string {
+    const digits = raw.replace(/\D/g, "").slice(0, 11);
+    let result = "";
+    for (let i = 0; i < digits.length; i++) {
+      if (i === 2 || i === 10) result += "-";
+      result += digits[i];
+    }
+    return result;
+  }
+
+  function handleCuilChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setCuil(formatCuil(e.target.value));
+  }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -38,45 +53,62 @@ export default function CuilSetup({ userName }: CuilSetupProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
-      <div className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-8 shadow-lg">
-        <h1 className="text-3xl font-bold mb-3">Completar tu perfil</h1>
-        <p className="text-slate-600 mb-6">
-          Hola <strong>{userName}</strong>, aún falta tu CUIL para acceder al panel. Ingresalo a continuación y seguí con tus gestiones.
-        </p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-brand-dark to-slate-800 flex items-center justify-center p-6">
+      <div className="w-full max-w-lg">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mx-auto mb-4">
+            <User className="h-8 w-8 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold text-white mb-2">Completar tu perfil</h1>
+          <p className="text-slate-400">
+            Hola <strong className="text-white">{userName}</strong>, aún falta tu CUIL para acceder al panel.
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <label className="block text-sm font-medium text-slate-700">
-            CUIL
-            <input
-              name="cuil"
-              value={cuil}
-              onChange={(event) => setCuil(event.target.value)}
-              placeholder="00-00000000-0"
-              className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            />
-          </label>
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <label className="block text-sm font-medium text-slate-700">
+              CUIL
+              <input
+                name="cuil"
+                value={cuil}
+                onChange={handleCuilChange}
+                placeholder="00-00000000-0"
+                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              />
+            </label>
 
-          <button
-            type="submit"
-            disabled={status.type === "saving"}
-            className="w-full rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-          >
-            {status.type === "saving" ? "Guardando..." : "Guardar CUIL"}
-          </button>
+            <button
+              type="submit"
+              disabled={status.type === "saving"}
+              className="w-full rounded-xl bg-brand-dark px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-slate-400 flex items-center justify-center gap-2"
+            >
+              {status.type === "saving" ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                "Guardar CUIL"
+              )}
+            </button>
 
-          {status.type === "error" && (
-            <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{status.message}</p>
-          )}
+            {status.type === "error" && (
+              <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{status.message}</p>
+            )}
 
-          {status.type === "success" && (
-            <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{status.message}</p>
-          )}
-        </form>
+            {status.type === "success" && (
+              <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{status.message}</p>
+            )}
+          </form>
 
-        <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
-          <p className="font-semibold">Por qué lo pedimos</p>
-          <p>El CUIL se usa para asociar tu cuenta de Clerk con tu registro fiscal y tus datos en la base de datos.</p>
+          <div className="mt-6 flex items-start gap-3 rounded-xl bg-slate-50 p-4 text-sm text-slate-500">
+            <Info className="h-5 w-5 text-slate-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-slate-700">Por qué lo pedimos</p>
+              <p>El CUIL se usa para asociar tu cuenta con tu registro fiscal en la base de datos del estudio.</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
