@@ -2,7 +2,7 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "../../../lib/prisma";
 import { Mail } from "lucide-react";
-import ContactForm from "./contact-form";
+import ContactForm from "./_components/contact-form";
 
 export default async function ContactoPage() {
   const { userId } = await auth();
@@ -15,7 +15,7 @@ export default async function ContactoPage() {
   if (!clerkUser?.cuil || !clerkUser?.rol) redirect("/dashboard");
 
   const cuilNumber = BigInt(clerkUser.cuil.replace(/\D/g, ""));
-  const dbAdmin = await db.administrador.findUnique({ where: { cuil: cuilNumber } });
+  const dbAdmin = await db.contador.findUnique({ where: { cuil: cuilNumber } });
   if (dbAdmin) redirect("/dashboard");
 
   const dbUsuario = await db.usuario.findUnique({ where: { CUIL_usuario: cuilNumber } });

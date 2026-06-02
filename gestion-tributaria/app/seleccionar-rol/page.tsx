@@ -1,7 +1,7 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "../../lib/prisma";
-import RoleSelector from "./role-selector";
+import RoleSelector from "./_components/role-selector";
 
 export default async function SeleccionarRolPage() {
   const { userId } = await auth();

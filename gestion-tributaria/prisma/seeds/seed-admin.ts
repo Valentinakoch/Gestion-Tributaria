@@ -32,9 +32,9 @@ async function main() {
   }
 
   // 2. Crear administrador
-  const adminExistente = await prisma.administrador.findUnique({ where: { cuil: cuilNum } });
+  const adminExistente = await prisma.contador.findUnique({ where: { cuil: cuilNum } });
   if (!adminExistente) {
-    await prisma.administrador.create({
+    await prisma.contador.create({
       data: { cuil: cuilNum, id_estudio: 3 },
     });
     console.log("administrador creado");
@@ -63,15 +63,15 @@ async function main() {
 
     const exists = await prisma.turno.findUnique({
       where: {
-        fecha_hora_cuil_admin_cuil_cliente: {
-          fecha, hora, cuil_admin: cuilNum, cuil_cliente: cliente.cuil,
+        fecha_hora_cuil_contador_cuil_cliente: {
+          fecha, hora, cuil_contador: cuilNum, cuil_cliente: cliente.cuil,
         },
       },
     });
 
     if (!exists) {
       await prisma.turno.create({
-        data: { cuil_cliente: cliente.cuil, cuil_admin: cuilNum, fecha, hora },
+        data: { cuil_cliente: cliente.cuil, cuil_contador: cuilNum, fecha, hora },
       });
       console.log(`turno creado: ${fecha.toISOString().slice(0, 10)} ${hora.toISOString().slice(11, 16)} cliente=${cliente.cuil}`);
     }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { crearTurno } from "@/actions";
+import { crearTurno } from "../../../../lib/actions/turnos.actions";
 import { Calendar, Clock, User, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import CustomSelect from "@/components/custom-select";
 

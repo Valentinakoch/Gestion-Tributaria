@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { enviarMensaje, actualizarContactoCliente } from "@/actions";
+import { enviarMensaje, actualizarContactoCliente } from "../../../../lib/actions/contacto.actions";
 import { Mail, Phone, Save, Loader2 } from "lucide-react";
 
 interface Props {

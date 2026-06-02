@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { verificarRol } from "@/actions";
+import { verificarRol } from "../../../lib/actions/auth.actions";
 import { User, Building2, Loader2 } from "lucide-react";
 
 export default function RoleSelector() {

@@ -1,7 +1,7 @@
 "use server";
 
 import { auth, currentUser } from "@clerk/nextjs/server";
-import { db } from "../lib/prisma";
+import { db } from "../prisma";
 import { revalidatePath } from "next/cache";
 
 export async function saveCuil(cuil: string) {
@@ -17,7 +17,7 @@ export async function saveCuil(cuil: string) {
   const cuilNumber = BigInt(cuil);
 
   try {
-    const existeAdmin = await db.administrador.findUnique({ where: { cuil: cuilNumber } });
+    const existeAdmin = await db.contador.findUnique({ where: { cuil: cuilNumber } });
     const existeCliente = await db.cliente.findUnique({ where: { cuil: cuilNumber } });
 
     if (!existeAdmin && !existeCliente) {
@@ -96,7 +96,7 @@ export async function crearTurno(data: {
 
     const cuilCliente = BigInt(clerkUser.cuil);
 
-    const admin = await db.administrador.findFirst();
+    const admin = await db.contador.findFirst();
     if (!admin) return { error: "No hay administradores disponibles." };
 
     const [h, m] = data.hora.split(":").map(Number);
@@ -106,7 +106,7 @@ export async function crearTurno(data: {
     await db.turno.create({
       data: {
         cuil_cliente: cuilCliente,
-        cuil_admin: admin.cuil,
+        cuil_contador: admin.cuil,
         fecha: new Date(data.fecha),
         hora: horaDate,
       },
@@ -164,9 +164,9 @@ export async function editarTurno(data: {
     await db.$transaction([
       db.turno.delete({
         where: {
-          fecha_hora_cuil_admin_cuil_cliente: {
+          fecha_hora_cuil_contador_cuil_cliente: {
             cuil_cliente: BigInt(data.cuilCliente),
-            cuil_admin: BigInt(data.cuilAdminActual),
+            cuil_contador: BigInt(data.cuilAdminActual),
             fecha: fechaOld,
             hora: horaOld,
           },
@@ -175,7 +175,7 @@ export async function editarTurno(data: {
       db.turno.create({
         data: {
           cuil_cliente: BigInt(data.cuilCliente),
-          cuil_admin: BigInt(data.nuevoCuilAdmin),
+          cuil_contador: BigInt(data.nuevoCuilAdmin),
           fecha: fechaNew,
           hora: horaNew,
         },
@@ -207,9 +207,9 @@ export async function borrarTurno(data: {
 
     await db.turno.delete({
       where: {
-        fecha_hora_cuil_admin_cuil_cliente: {
+        fecha_hora_cuil_contador_cuil_cliente: {
           cuil_cliente: BigInt(data.cuilCliente),
-          cuil_admin: BigInt(data.cuilAdmin),
+          cuil_contador: BigInt(data.cuilAdmin),
           fecha: fechaDate,
           hora: horaDate,
         },
@@ -259,7 +259,7 @@ export async function verificarRol(rol: "admin" | "cliente") {
     const cuilNumber = BigInt(clerkUser.cuil.trim());
 
     if (rol === "admin") {
-      const admin = await db.administrador.findUnique({ where: { cuil: cuilNumber } });
+      const admin = await db.contador.findUnique({ where: { cuil: cuilNumber } });
       if (!admin) return { error: "Este CUIL no está registrado como administrador. Contactá al estudio contable." };
     } else {
       const cliente = await db.cliente.findUnique({ where: { cuil: cuilNumber } });

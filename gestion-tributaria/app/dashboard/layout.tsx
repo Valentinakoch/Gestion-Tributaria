@@ -58,7 +58,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   let userRole: "ADMIN" | "CLIENTE";
 
   try {
-    const dbAdmin = await db.administrador.findUnique({
+    const dbAdmin = await db.contador.findUnique({
       where: { cuil: userCuilNumber },
     });
     userRole = dbAdmin ? "ADMIN" : "CLIENTE";

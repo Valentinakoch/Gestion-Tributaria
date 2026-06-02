@@ -2,8 +2,8 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "../../lib/prisma";
 import { Users, BarChart3, CheckCircle, AlertTriangle, ArrowLeft } from "lucide-react";
-import AdminClientList from "./admin-client-list";
-import ClientTaxSituation from "./client-tax-situation";
+import AdminClientList from "./_components/admin-client-list";
+import ClientTaxSituation from "./_components/client-tax-situation";
 
 export default async function DashboardPage() {
   const { userId } = await auth();
@@ -18,7 +18,7 @@ export default async function DashboardPage() {
   const userCuil = clerkUser.cuil.replace(/\D/g, "");
   const userCuilNumber = BigInt(userCuil);
 
-  const dbAdmin = await db.administrador.findUnique({
+  const dbAdmin = await db.contador.findUnique({
     where: { cuil: userCuilNumber },
     select: { cuil: true, id_estudio: true },
   });

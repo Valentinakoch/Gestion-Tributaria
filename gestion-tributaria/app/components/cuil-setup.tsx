@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { saveCuil } from "@/actions";
+import { saveCuil } from "../../lib/actions/auth.actions";
 import { User, Info, Loader2 } from "lucide-react";
 
 interface CuilSetupProps {

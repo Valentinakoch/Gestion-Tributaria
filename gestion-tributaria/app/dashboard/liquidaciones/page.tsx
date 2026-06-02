@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "../../../lib/prisma";
 import { FileText } from "lucide-react";
-import LiquidacionesList from "./liquidaciones-list";
+import LiquidacionesList from "./_components/liquidaciones-list";
 
 export default async function LiquidacionesPage() {
   const { userId } = await auth();
@@ -12,7 +12,7 @@ export default async function LiquidacionesPage() {
   if (!clerkUser?.cuil || !clerkUser?.rol) redirect("/dashboard");
 
   const cuilNumber = BigInt(clerkUser.cuil.replace(/\D/g, ""));
-  const dbAdmin = await db.administrador.findUnique({ where: { cuil: cuilNumber } });
+  const dbAdmin = await db.contador.findUnique({ where: { cuil: cuilNumber } });
   if (!dbAdmin) redirect("/dashboard");
 
   const liquidaciones = await db.liquidacion.findMany({

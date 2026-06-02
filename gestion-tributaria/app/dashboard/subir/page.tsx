@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "../../../lib/prisma";
 import { Upload } from "lucide-react";
-import SubirForm from "./subir-form";
+import SubirForm from "./_components/subir-form";
 
 export default async function SubirPage() {
   const { userId } = await auth();
@@ -12,7 +12,7 @@ export default async function SubirPage() {
   if (!clerkUser?.cuil || !clerkUser?.rol) redirect("/dashboard");
 
   const cuilNumber = BigInt(clerkUser.cuil.replace(/\D/g, ""));
-  const dbAdmin = await db.administrador.findUnique({
+  const dbAdmin = await db.contador.findUnique({
     where: { cuil: cuilNumber },
     select: { cuil: true, id_estudio: true },
   });

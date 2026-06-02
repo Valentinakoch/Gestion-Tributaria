@@ -9,7 +9,7 @@ export default function SignInPage() {
           <p className="text-slate-400 text-sm">Accedé al Sistema de Gestión Tributaria</p>
         </div>
         <div className="bg-white rounded-2xl shadow-xl p-8">
-          <SignIn 
+          <SignIn
             fallbackRedirectUrl="/dashboard"
             appearance={{
               variables: {

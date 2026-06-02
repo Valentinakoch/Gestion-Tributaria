@@ -99,10 +99,10 @@ async function main() {
 
   const turnoExists = await prisma.turno.findUnique({
     where: {
-      fecha_hora_cuil_admin_cuil_cliente: {
+      fecha_hora_cuil_contador_cuil_cliente: {
         fecha: turnoFecha,
         hora: turnoHora,
-        cuil_admin: adminCuil,
+        cuil_contador: adminCuil,
         cuil_cliente: cuilNum,
       },
     },
@@ -112,7 +112,7 @@ async function main() {
     await prisma.turno.create({
       data: {
         cuil_cliente: cuilNum,
-        cuil_admin: adminCuil,
+        cuil_contador: adminCuil,
         fecha: turnoFecha,
         hora: turnoHora,
       },

@@ -9,7 +9,7 @@ export default function SignUpPage() {
           <p className="text-slate-400 text-sm">Registrate en el Sistema de Gestión Tributaria</p>
         </div>
         <div className="bg-white rounded-2xl shadow-xl p-8">
-          <SignUp 
+          <SignUp
             fallbackRedirectUrl="/dashboard"
             appearance={{
               variables: {

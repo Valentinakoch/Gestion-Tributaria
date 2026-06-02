@@ -31,7 +31,7 @@ async function main() {
   await prisma.liquidacion.deleteMany();
   await prisma.comprobante.deleteMany();
   await prisma.cliente.deleteMany();
-  await prisma.administrador.deleteMany();
+  await prisma.contador.deleteMany();
   await prisma.usuario.deleteMany();
   await prisma.impuesto.deleteMany();
   await prisma.entidad_tributaria.deleteMany();
@@ -43,7 +43,7 @@ async function main() {
   console.log("Creando usuario administrador...");
   await insertUsuario("12345678910", "Tomás", "Gadea", "tomasgadea2003@hotmail.com", null);
 
-  await prisma.administrador.create({
+  await prisma.contador.create({
     data: { cuil: BigInt("12345678910"), id_estudio: estudio.id_estudio },
   });
 
@@ -175,7 +175,7 @@ async function main() {
     await prisma.turno.create({
       data: {
         cuil_cliente: BigInt(t.cuil),
-        cuil_admin: BigInt("12345678910"),
+        cuil_contador: BigInt("12345678910"),
         fecha: t.fecha,
         hora: horaDate,
       },

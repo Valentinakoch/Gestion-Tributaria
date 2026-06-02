@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Calendar, Clock, User, Trash2, Settings, X, Search, ChevronLeft, ChevronRight } from "lucide-react";
-import { editarTurno, borrarTurno } from "@/actions";
+import { editarTurno, borrarTurno } from "../../../../lib/actions/turnos.actions";
 import CustomSelect from "@/components/custom-select";
 
 interface TurnoData {

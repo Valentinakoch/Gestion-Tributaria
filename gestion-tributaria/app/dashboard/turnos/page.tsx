@@ -2,8 +2,8 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "../../../lib/prisma";
 import { Calendar } from "lucide-react";
-import TurnoForm from "./turno-form";
-import TurnosAdminList from "./turnos-admin-list";
+import TurnoForm from "./_components/turno-form";
+import TurnosAdminList from "./_components/turnos-admin-list";
 
 export default async function TurnosPage() {
   const { userId } = await auth();
@@ -16,7 +16,7 @@ export default async function TurnosPage() {
   if (!clerkUser?.cuil || !clerkUser?.rol) redirect("/dashboard");
 
   const cuilNumber = BigInt(clerkUser.cuil.replace(/\D/g, ""));
-  const dbAdmin = await db.administrador.findUnique({ where: { cuil: cuilNumber } });
+  const dbAdmin = await db.contador.findUnique({ where: { cuil: cuilNumber } });
 
   if (dbAdmin) {
     const [turnos, admins] = await Promise.all([
@@ -25,19 +25,19 @@ export default async function TurnosPage() {
           cliente: {
             include: { usuario: { select: { nombre_usuario: true, apellido_usuario: true } } },
           },
-          administrador: {
+          contador: {
             include: { usuario: { select: { nombre_usuario: true, apellido_usuario: true } } },
           },
         },
         orderBy: [{ fecha: "desc" }, { hora: "desc" }],
       }),
-      db.administrador.findMany({
+      db.contador.findMany({
         include: { usuario: { select: { nombre_usuario: true, apellido_usuario: true } } },
       }),
     ]);
 
     const turnosData = turnos.map((t) => ({
-      id: `${t.fecha.toISOString()}-${t.hora.toISOString()}-${t.cuil_cliente}-${t.cuil_admin}`,
+      id: `${t.fecha.toISOString()}-${t.hora.toISOString()}-${t.cuil_cliente}-${t.cuil_contador}`,
       cliente:
         [t.cliente?.usuario?.nombre_usuario, t.cliente?.usuario?.apellido_usuario]
           .filter(Boolean)
@@ -47,11 +47,11 @@ export default async function TurnosPage() {
       fechaIso: t.fecha.toISOString().slice(0, 10),
       horaIso: t.hora.toISOString().slice(11, 16),
       cuilCliente: t.cuil_cliente.toString(),
-      cuilAdmin: t.cuil_admin.toString(),
+      cuilAdmin: t.cuil_contador.toString(),
       adminNombre:
-        [t.administrador?.usuario?.nombre_usuario, t.administrador?.usuario?.apellido_usuario]
+        [t.contador?.usuario?.nombre_usuario, t.contador?.usuario?.apellido_usuario]
           .filter(Boolean)
-          .join(" ") || `Admin CUIL: ${t.cuil_admin}`,
+          .join(" ") || `Admin CUIL: ${t.cuil_contador}`,
     }));
 
     const adminsData = admins.map((a) => ({
@@ -82,7 +82,7 @@ export default async function TurnosPage() {
   const turnosCliente = await db.turno.findMany({
     where: { cuil_cliente: cuilNumber },
     include: {
-      administrador: {
+      contador: {
         include: { usuario: { select: { nombre_usuario: true, apellido_usuario: true } } },
       },
     },
@@ -90,11 +90,11 @@ export default async function TurnosPage() {
   });
 
   const turnosClienteData = turnosCliente.map((t) => ({
-    id: `${t.fecha.toISOString()}-${t.hora.toISOString()}-${t.cuil_cliente}-${t.cuil_admin}`,
+    id: `${t.fecha.toISOString()}-${t.hora.toISOString()}-${t.cuil_cliente}-${t.cuil_contador}`,
     fecha: t.fecha.toLocaleDateString("es-AR"),
     hora: t.hora.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }),
     adminNombre:
-      [t.administrador?.usuario?.nombre_usuario, t.administrador?.usuario?.apellido_usuario]
+      [t.contador?.usuario?.nombre_usuario, t.contador?.usuario?.apellido_usuario]
         .filter(Boolean)
         .join(" ") || `Admin`,
   }));

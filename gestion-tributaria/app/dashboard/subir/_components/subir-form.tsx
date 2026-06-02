@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { crearLiquidacion } from "@/actions";
+import { crearLiquidacion } from "../../../../lib/actions/liquidaciones.actions";
 import { User, Receipt, DollarSign, Calendar, Loader2, Upload, CheckCircle, AlertTriangle, ArrowLeft } from "lucide-react";
 import CustomSelect from "@/components/custom-select";
 

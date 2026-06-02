@@ -4,7 +4,7 @@ config({ path: '.env.local' })
 
 export default defineConfig({
   migrations: {
-    seed: "tsx prisma/seed.ts",
+    seed: "tsx prisma/seeds/seed.ts",
   },
   datasource: {
     url: process.env.DATABASE_URL,

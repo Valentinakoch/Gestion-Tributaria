@@ -6,19 +6,22 @@ datasource db {
   provider = "postgresql"
 }
 
-model administrador {
+model contador {
   cuil             BigInt            @id(map: "cuil")
   id_estudio       Int?
   usuario          usuario           @relation(fields: [cuil], references: [CUIL_usuario], onDelete: NoAction, onUpdate: NoAction, map: "cuil_usuario")
   estudio_contable estudio_contable? @relation(fields: [id_estudio], references: [id_estudio], onDelete: NoAction, onUpdate: NoAction, map: "id_estudio")
+  cliente          cliente[]
   turno            turno[]
 }
 
 model cliente {
   cuil             BigInt            @id
   id_estudio       Int?
+  contador         BigInt?
   usuario          usuario           @relation(fields: [cuil], references: [CUIL_usuario], onDelete: NoAction, onUpdate: NoAction, map: "cuil_usuario")
   estudio_contable estudio_contable? @relation(fields: [id_estudio], references: [id_estudio], onDelete: NoAction, onUpdate: NoAction, map: "id_estudio")
+  contadorRelacion contador?         @relation(fields: [contador], references: [cuil], onDelete: NoAction, onUpdate: NoAction, map: "contador_cliente")
   inscripto_en     inscripto_en[]
   liquidacion      liquidacion[]
   turno            turno[]
@@ -39,9 +42,9 @@ model entidad_tributaria {
 }
 
 model estudio_contable {
-  id_estudio    Int             @id @default(autoincrement())
-  administrador administrador[]
-  cliente       cliente[]
+  id_estudio Int       @id @default(autoincrement())
+  contador   contador[]
+  cliente    cliente[]
 }
 
 model impuesto {
@@ -74,12 +77,12 @@ model liquidacion {
 }
 
 model usuario {
-  CUIL_usuario     BigInt         @id
+  CUIL_usuario     BigInt    @id
   nombre_usuario   String?
   apellido_usuario String?
-  email            String?        @unique
+  email            String?   @unique
   telefono         String?
-  administrador    administrador?
+  contador         contador?
   cliente          cliente?
 }
 
@@ -96,10 +99,10 @@ model clerk_user {
 model turno {
   fecha         DateTime      @db.Date
   hora          DateTime      @db.Time(0)
-  cuil_admin    BigInt
+  cuil_contador   BigInt
   cuil_cliente  BigInt
-  administrador administrador @relation(fields: [cuil_admin], references: [cuil], onDelete: NoAction, onUpdate: NoAction, map: "cuil_admin")
+  contador      contador      @relation(fields: [cuil_contador], references: [cuil], onDelete: NoAction, onUpdate: NoAction, map: "cuil_contador")
   cliente       cliente       @relation(fields: [cuil_cliente], references: [cuil], onDelete: NoAction, onUpdate: NoAction, map: "cuil_cliente")
 
-  @@id([fecha, hora, cuil_admin, cuil_cliente], map: "pk_turno")
+  @@id([fecha, hora, cuil_contador, cuil_cliente], map: "pk_turno")
 }
