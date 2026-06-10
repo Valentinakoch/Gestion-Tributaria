@@ -27,9 +27,11 @@ CREATE TABLE contador (
 CREATE TABLE cliente (
     cuil INTEGER,
     id_estudio INTEGER,
+    contador BIGINT,
     CONSTRAINT cliente_pkey PRIMARY KEY (cuil),
     CONSTRAINT cuil_usuario FOREIGN KEY (cuil) REFERENCES usuario(cuil),
-    CONSTRAINT id_estudio FOREIGN KEY (id_estudio) REFERENCES estudio_contable(id_estudio)
+    CONSTRAINT id_estudio FOREIGN KEY (id_estudio) REFERENCES estudio_contable(id_estudio),
+    CONSTRAINT contador_cliente FOREIGN KEY (contador) REFERENCES contador(cuil)
 );
 
 -- Creación de la tabla Entidad Tributaria
