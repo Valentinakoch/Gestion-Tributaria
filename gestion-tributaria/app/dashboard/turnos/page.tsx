@@ -11,9 +11,9 @@ export default async function TurnosPage() {
 
   const user = await currentUser();
   const nombreUsuario = `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || "Usuario";
-
+  
+  //es contador
   const contador = await db.contador.findFirst({ where: { clerk_id: userId } });
-
   if (contador) {
     const [turnos, admins] = await Promise.all([
       db.turno.findMany({
@@ -28,20 +28,18 @@ export default async function TurnosPage() {
 
     const turnosData = turnos.map((t) => ({
       id: `${t.fecha.toISOString()}-${t.hora.toISOString()}-${t.cuil_cliente}-${t.cuil_contador}`,
-      cliente:
-        [t.cliente?.nombre, t.cliente?.apellido]
-          .filter(Boolean)
-          .join(" ") || `CUIL: ${t.cuil_cliente}`,
-      fecha: t.fecha.toLocaleDateString("es-AR"),
-      hora: t.hora.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }),
-      fechaIso: t.fecha.toISOString().slice(0, 10),
-      horaIso: t.hora.toISOString().slice(11, 16),
-      cuilCliente: t.cuil_cliente?.toString() ?? "",
-      cuilAdmin: t.cuil_contador.toString(),
+      cliente: t.cuil_cliente
+        ? [t.cliente?.nombre, t.cliente?.apellido].filter(Boolean).join(" ") || `CUIL: ${t.cuil_cliente}`
+        : null, // null = turno disponible, sin cliente
+      fecha: `${String(t.fecha.getUTCDate()).padStart(2, "0")}/${String(t.fecha.getUTCMonth() + 1).padStart(2, "0")}/${t.fecha.getUTCFullYear()}`,
+      hora: `${String(t.hora.getUTCHours()).padStart(2, "0")}:${String(t.hora.getUTCMinutes()).padStart(2, "0")}`,
+      fechaIso: `${t.fecha.getUTCFullYear()}-${String(t.fecha.getUTCMonth() + 1).padStart(2, "0")}-${String(t.fecha.getUTCDate()).padStart(2, "0")}`,
+      horaIso: `${String(t.hora.getUTCHours()).padStart(2, "0")}:${String(t.hora.getUTCMinutes()).padStart(2, "0")}`,
+      cuilContador: t.cuil_contador.toString(),
       adminNombre:
-        [t.contador?.nombre, t.contador?.apellido]
-          .filter(Boolean)
-          .join(" ") || `Admin CUIL: ${t.cuil_contador}`,
+        [t.contador?.nombre, t.contador?.apellido].filter(Boolean).join(" ") ||
+        `Admin CUIL: ${t.cuil_contador}`,
+      reservado: t.cuil_cliente !== null, // true = tiene cliente, no se puede deshabilitar
     }));
 
     const adminsData = admins.map((a) => ({
