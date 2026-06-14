@@ -8,18 +8,12 @@ export default async function LiquidacionesPage() {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
-  const clerkUser = await db.clerk_user.findUnique({ where: { id: userId } });
-  if (!clerkUser?.cuil || !clerkUser?.rol) redirect("/dashboard");
-
-  const cuilNumber = BigInt(clerkUser.cuil.replace(/\D/g, ""));
-  const dbAdmin = await db.contador.findUnique({ where: { cuil: cuilNumber } });
-  if (!dbAdmin) redirect("/dashboard");
+  const contador = await db.contador.findFirst({ where: { clerk_id: userId } });
+  if (!contador) redirect("/dashboard");
 
   const liquidaciones = await db.liquidacion.findMany({
     include: {
-      cliente: {
-        include: { usuario: { select: { nombre_usuario: true, apellido_usuario: true } } },
-      },
+      cliente: { select: { nombre: true, apellido: true } },
       impuesto: { select: { formato: true } },
     },
     orderBy: { periodo_fiscal: "desc" },
@@ -28,7 +22,7 @@ export default async function LiquidacionesPage() {
   const data = liquidaciones.map((l) => ({
     numeroBoleta: l.numero_boleta,
     cliente:
-      [l.cliente?.usuario?.nombre_usuario, l.cliente?.usuario?.apellido_usuario]
+      [l.cliente?.nombre, l.cliente?.apellido]
         .filter(Boolean)
         .join(" ") || `CUIL: ${l.cuil_cliente}`,
     impuesto: l.impuesto?.formato || "—",

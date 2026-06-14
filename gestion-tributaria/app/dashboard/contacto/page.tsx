@@ -11,14 +11,11 @@ export default async function ContactoPage() {
   const user = await currentUser();
   const nombreUsuario = `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || "Usuario";
 
-  const clerkUser = await db.clerk_user.findUnique({ where: { id: userId } });
-  if (!clerkUser?.cuil || !clerkUser?.rol) redirect("/dashboard");
+  const isContador = await db.contador.findFirst({ where: { clerk_id: userId } });
+  if (isContador) redirect("/dashboard");
 
-  const cuilNumber = BigInt(clerkUser.cuil.replace(/\D/g, ""));
-  const dbAdmin = await db.contador.findUnique({ where: { cuil: cuilNumber } });
-  if (dbAdmin) redirect("/dashboard");
-
-  const dbUsuario = await db.usuario.findUnique({ where: { CUIL_usuario: cuilNumber } });
+  const cliente = await db.cliente.findFirst({ where: { clerk_id: userId } });
+  if (!cliente) redirect("/dashboard");
 
   return (
     <div>
@@ -33,8 +30,8 @@ export default async function ContactoPage() {
       </header>
 
       <ContactForm
-        email={dbUsuario?.email || ""}
-        telefono={dbUsuario?.telefono || ""}
+        email={cliente.email || ""}
+        telefono={cliente.telefono || ""}
       />
     </div>
   );
