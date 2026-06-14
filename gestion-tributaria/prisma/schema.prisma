@@ -7,9 +7,13 @@ datasource db {
 }
 
 model contador {
-  cuil             BigInt            @id(map: "cuil")
+  cuil             BigInt            @id
+  clerk_id         String?           @unique
   id_estudio       Int?
-  usuario          usuario           @relation(fields: [cuil], references: [CUIL_usuario], onDelete: NoAction, onUpdate: NoAction, map: "cuil_usuario")
+  nombre           String?
+  apellido         String?
+  email            String?           @unique
+  telefono         String?
   estudio_contable estudio_contable? @relation(fields: [id_estudio], references: [id_estudio], onDelete: NoAction, onUpdate: NoAction, map: "id_estudio")
   cliente          cliente[]
   turno            turno[]
@@ -17,9 +21,13 @@ model contador {
 
 model cliente {
   cuil             BigInt            @id
+  clerk_id         String?           @unique
   id_estudio       Int?
   contador         BigInt?
-  usuario          usuario           @relation(fields: [cuil], references: [CUIL_usuario], onDelete: NoAction, onUpdate: NoAction, map: "cuil_usuario")
+  nombre           String?
+  apellido         String?
+  email            String?
+  telefono         String?
   estudio_contable estudio_contable? @relation(fields: [id_estudio], references: [id_estudio], onDelete: NoAction, onUpdate: NoAction, map: "id_estudio")
   contadorRelacion contador?         @relation(fields: [contador], references: [cuil], onDelete: NoAction, onUpdate: NoAction, map: "contador_cliente")
   inscripto_en     inscripto_en[]
@@ -76,33 +84,13 @@ model liquidacion {
   comprobante               comprobante? @relation(fields: [numero_boleta_comprobante], references: [numero_boleta], onDelete: NoAction, onUpdate: NoAction, map: "numero_boleta")
 }
 
-model usuario {
-  CUIL_usuario     BigInt    @id
-  nombre_usuario   String?
-  apellido_usuario String?
-  email            String?   @unique
-  telefono         String?
-  contador         contador?
-  cliente          cliente?
-}
-
-model clerk_user {
-  id        String   @id
-  email     String?
-  firstName String?
-  lastName  String?
-  cuil      String?
-  rol       String?
-  createdAt DateTime @default(now())
-}
-
 model turno {
   fecha         DateTime      @db.Date
   hora          DateTime      @db.Time(0)
   cuil_contador   BigInt
-  cuil_cliente  BigInt
+  cuil_cliente  BigInt?
   contador      contador      @relation(fields: [cuil_contador], references: [cuil], onDelete: NoAction, onUpdate: NoAction, map: "cuil_contador")
-  cliente       cliente       @relation(fields: [cuil_cliente], references: [cuil], onDelete: NoAction, onUpdate: NoAction, map: "cuil_cliente")
+  cliente       cliente?      @relation(fields: [cuil_cliente], references: [cuil], onDelete: NoAction, onUpdate: NoAction, map: "cuil_cliente")
 
-  @@id([fecha, hora, cuil_contador, cuil_cliente], map: "pk_turno")
+  @@id([fecha, hora, cuil_contador], map: "pk_turno")
 }

@@ -12,10 +12,8 @@ export async function crearTurno(data: {
   if (!userId) return { error: "No autenticado." };
 
   try {
-    const clerkUser = await db.clerk_user.findUnique({ where: { id: userId } });
-    if (!clerkUser?.cuil) return { error: "CUIL no registrado." };
-
-    const cuilCliente = BigInt(clerkUser.cuil);
+    const cliente = await db.cliente.findFirst({ where: { clerk_id: userId } });
+    if (!cliente) return { error: "CUIL no registrado." };
 
     const admin = await db.contador.findFirst();
     if (!admin) return { error: "No hay administradores disponibles." };
@@ -26,7 +24,7 @@ export async function crearTurno(data: {
 
     await db.turno.create({
       data: {
-        cuil_cliente: cuilCliente,
+        cuil_cliente: cliente.cuil,
         cuil_contador: admin.cuil,
         fecha: new Date(data.fecha),
         hora: horaDate,
@@ -68,8 +66,7 @@ export async function editarTurno(data: {
     await db.$transaction([
       db.turno.delete({
         where: {
-          fecha_hora_cuil_contador_cuil_cliente: {
-            cuil_cliente: BigInt(data.cuilCliente),
+          fecha_hora_cuil_contador: {
             cuil_contador: BigInt(data.cuilAdminActual),
             fecha: fechaOld,
             hora: horaOld,
@@ -111,8 +108,7 @@ export async function borrarTurno(data: {
 
     await db.turno.delete({
       where: {
-        fecha_hora_cuil_contador_cuil_cliente: {
-          cuil_cliente: BigInt(data.cuilCliente),
+        fecha_hora_cuil_contador: {
           cuil_contador: BigInt(data.cuilAdmin),
           fecha: fechaDate,
           hora: horaDate,

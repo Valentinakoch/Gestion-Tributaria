@@ -1,7 +1,6 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "../../lib/prisma";
-import { Users, BarChart3, CheckCircle, AlertTriangle, ArrowLeft } from "lucide-react";
 import AdminClientList from "./_components/admin-client-list";
 import ClientTaxSituation from "./_components/client-tax-situation";
 
@@ -12,35 +11,22 @@ export default async function DashboardPage() {
   const user = await currentUser();
   const nombreUsuario = `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || "Usuario";
 
-  const clerkUser = await db.clerk_user.findUnique({ where: { id: userId } });
-  if (!clerkUser?.cuil || !clerkUser?.rol) redirect("/dashboard");
-
-  const userCuil = clerkUser.cuil.replace(/\D/g, "");
-  const userCuilNumber = BigInt(userCuil);
-
-  const dbAdmin = await db.contador.findUnique({
-    where: { cuil: userCuilNumber },
-    select: { cuil: true, id_estudio: true },
-  });
+  const dbAdmin = await db.contador.findFirst({ where: { clerk_id: userId } });
 
   if (dbAdmin) {
-    const [clientes, impuestos] = await Promise.all([
-      db.cliente.findMany({
-        where: { id_estudio: dbAdmin.id_estudio },
-        select: {
-          cuil: true,
-          usuario: { select: { nombre_usuario: true, apellido_usuario: true } },
-          liquidacion: { select: { estado: true } },
-        },
-      }),
-      db.impuesto.findMany({ select: { id_impuesto: true, formato: true } }),
-    ]);
+    const clientes = await db.cliente.findMany({
+      where: { id_estudio: dbAdmin.id_estudio },
+      select: {
+        cuil: true,
+        nombre: true,
+        apellido: true,
+        liquidacion: { select: { estado: true } },
+      },
+    });
 
     const clientesData = clientes.map((c) => ({
       id: c.cuil.toString(),
-      nombre:
-        [c.usuario?.nombre_usuario, c.usuario?.apellido_usuario].filter(Boolean).join(" ") ||
-        `Cliente CUIL: ${c.cuil}`,
+      nombre: [c.nombre, c.apellido].filter(Boolean).join(" ") || `Cliente CUIL: ${c.cuil}`,
       cuit: c.cuil.toString(),
       estado: (c.liquidacion.some((l) => l.estado?.toUpperCase() === "PENDIENTE")
         ? "pendiente"
@@ -50,8 +36,8 @@ export default async function DashboardPage() {
     return <AdminClientList adminName={nombreUsuario} clientesData={clientesData} />;
   }
 
-  const dbCliente = await db.cliente.findUnique({
-    where: { cuil: userCuilNumber },
+  const dbCliente = await db.cliente.findFirst({
+    where: { clerk_id: userId },
     include: {
       liquidacion: { include: { impuesto: true, comprobante: true } },
     },
@@ -62,7 +48,7 @@ export default async function DashboardPage() {
       <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
         <h1 className="text-3xl font-bold mb-4">Cuenta no registrada</h1>
         <p className="text-slate-600 max-w-xl">
-          No hay un contribuyente asociado a ese CUIL en la base de datos. Verificá tu CUIL o contactá al soporte.
+          No hay un contribuyente asociado a tu cuenta. Verificá tu CUIL o contactá al estudio.
         </p>
       </div>
     );
