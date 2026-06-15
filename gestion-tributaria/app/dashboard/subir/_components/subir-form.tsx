@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { crearLiquidacion } from "../../../../lib/actions/liquidaciones.actions";
-import { User, Receipt, DollarSign, Calendar, Loader2, Upload, CheckCircle, AlertTriangle, ArrowLeft } from "lucide-react";
+import { User, Receipt, DollarSign, Calendar, Loader2, Upload, CheckCircle, AlertTriangle, ArrowLeft, FileText, X } from "lucide-react";
 import CustomSelect from "@/components/custom-select";
 
 interface Cliente {
@@ -47,11 +47,12 @@ function formatPeriodo(raw: string): string {
 }
 
 export default function SubirForm({ clientes, impuestos }: Props) {
-  const [clienteId, setClienteId] = useState(clientes[0]?.id || "");
-  const [impuestoId, setImpuestoId] = useState(String(impuestos[0]?.id_impuesto || ""));
+  const [clienteId, setClienteId] = useState("");
+  const [impuestoId, setImpuestoId] = useState("");
   const [montoDisplay, setMontoDisplay] = useState("");
   const [periodo, setPeriodo] = useState("");
   const [subiendo, setSubiendo] = useState(false);
+  const [archivo, setArchivo] = useState<File | null>(null);
   const [mensaje, setMensaje] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
 
   function handleMontoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -65,12 +66,21 @@ export default function SubirForm({ clientes, impuestos }: Props) {
     setPeriodo(formatPeriodo(e.target.value));
   }
 
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file && file.type === "application/pdf") {
+      setArchivo(file);
+    } else if (file) {
+      setMensaje({ tipo: "error", texto: "Por favor, seleccioná un archivo PDF válido." });
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubiendo(true);
     setMensaje(null);
 
-    if (!clienteId || !impuestoId || !montoDisplay || !periodo) {
+    if (!clienteId || !impuestoId || !montoDisplay || !periodo || !archivo) {
       setMensaje({ tipo: "error", texto: "Completá todos los campos." });
       setSubiendo(false);
       return;
@@ -92,17 +102,21 @@ export default function SubirForm({ clientes, impuestos }: Props) {
     }
     const periodoFormateado = `${match[3]}-${match[2]}-${match[1]}`;
 
-    const res = await crearLiquidacion({
-      cuilCliente: clienteId,
-      idImpuesto: Number(impuestoId),
-      monto: montoNumerico,
-      periodo: periodoFormateado,
-    });
+    // Usamos FormData para enviar el archivo de forma segura
+    const fd = new FormData();
+    fd.append("cuilCliente", clienteId);
+    fd.append("idImpuesto", impuestoId);
+    fd.append("monto", montoNumerico.toString());
+    fd.append("periodo", periodoFormateado);
+    fd.append("archivo", archivo);
+
+    const res = await crearLiquidacion(fd);
 
     if (res.success) {
       setMensaje({ tipo: "ok", texto: "Liquidación creada correctamente." });
       setMontoDisplay("");
       setPeriodo("");
+      setArchivo(null);
     } else {
       setMensaje({ tipo: "error", texto: res.error || "Error al crear la liquidación." });
     }
@@ -141,6 +155,7 @@ export default function SubirForm({ clientes, impuestos }: Props) {
             <CustomSelect
               options={clientes.map((c) => ({ value: c.id, label: c.nombre }))}
               value={clienteId}
+              placeholder="Seleccionar Cliente"
               onChange={(v) => setClienteId(v)}
             />
           </div>
@@ -153,6 +168,7 @@ export default function SubirForm({ clientes, impuestos }: Props) {
             <CustomSelect
               options={impuestos.map((imp) => ({ value: String(imp.id_impuesto), label: imp.formato || "—" }))}
               value={impuestoId}
+              placeholder="Seleccionar Impuesto"
               onChange={(v) => setImpuestoId(v)}
             />
           </div>
@@ -186,6 +202,44 @@ export default function SubirForm({ clientes, impuestos }: Props) {
                 maxLength={10}
                 className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
               />
+            </div>
+          </div>
+
+          <div>
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
+              <FileText className="h-4 w-4 text-slate-400" />
+              Comprobante (PDF)
+            </label>
+            <div className="relative">
+              {!archivo ? (
+                <div className="flex items-center justify-center w-full">
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-200 border-dashed rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Upload className="w-8 h-8 mb-3 text-slate-400" />
+                      <p className="mb-2 text-sm text-slate-500"><span className="font-semibold">Hacé click para subir</span> o arrastrá un PDF</p>
+                      <p className="text-xs text-slate-400">PDF (Máx. 10MB)</p>
+                    </div>
+                    <input type="file" className="hidden" accept="application/pdf" onChange={handleFileChange} />
+                  </label>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                  <div className="h-10 w-10 bg-white rounded-lg flex items-center justify-center text-blue-600 shadow-sm">
+                    <FileText className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-blue-900 truncate">{archivo.name}</p>
+                    <p className="text-xs text-blue-500">{(archivo.size / 1024 / 1024).toFixed(2)} MB</p>
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={() => setArchivo(null)}
+                    className="p-1.5 hover:bg-white rounded-full text-slate-400 hover:text-red-500 transition-all"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
