@@ -1,7 +1,6 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "../../lib/prisma";
-import AdminClientList from "./_components/admin-client-list";
 import ClientTaxSituation from "./_components/client-tax-situation";
 
 export default async function DashboardPage() {
@@ -12,29 +11,7 @@ export default async function DashboardPage() {
   const nombreUsuario = `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || "Usuario";
 
   const dbAdmin = await db.contador.findFirst({ where: { clerk_id: userId } });
-
-  if (dbAdmin) {
-    const clientes = await db.cliente.findMany({
-      where: { id_estudio: dbAdmin.id_estudio },
-      select: {
-        cuil: true,
-        nombre: true,
-        apellido: true,
-        liquidacion: { select: { estado: true } },
-      },
-    });
-
-    const clientesData = clientes.map((c) => ({
-      id: c.cuil.toString(),
-      nombre: [c.nombre, c.apellido].filter(Boolean).join(" ") || `Cliente CUIL: ${c.cuil}`,
-      cuit: c.cuil.toString(),
-      estado: (c.liquidacion.some((l) => l.estado?.toUpperCase() === "PENDIENTE")
-        ? "pendiente"
-        : "al_dia") as "pendiente" | "al_dia",
-    }));
-
-    return <AdminClientList adminName={nombreUsuario} clientesData={clientesData} />;
-  }
+  if (dbAdmin) redirect("/dashboard/clientes");
 
   const dbCliente = await db.cliente.findFirst({
     where: { clerk_id: userId },

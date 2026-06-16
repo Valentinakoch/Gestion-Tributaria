@@ -5,10 +5,8 @@ import Sidebar from "@/components/sidebar";
 import CuilSetup from "@/components/cuil-setup";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { userId, sessionClaims } = await auth();
+  const { userId } = await auth();
   if (!userId) redirect("/sign-in");
-
-  const role = (sessionClaims?.metadata as { role?: string } | undefined)?.role;
 
   const user = await currentUser();
   const nombreUsuario = `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || "Usuario";
@@ -20,7 +18,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     return <CuilSetup userName={nombreUsuario} />;
   }
 
-  const userRole = role === "admin" || contador ? "ADMIN" : "CLIENTE";
+
+  const userRole: "ADMIN" | "CLIENTE" = contador ? "ADMIN" : "CLIENTE";
 
   return (
     <div className="flex min-h-screen bg-[#f8fafc]">
