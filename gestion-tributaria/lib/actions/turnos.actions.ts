@@ -16,7 +16,13 @@ export async function crearTurno(data: {
 
   try {
     const [h, m] = data.hora.split(":").map(Number);
-   const horaDate = new Date(`1970-01-01T${data.hora}:00.000Z`);
+    const horaDate = new Date(`1970-01-01T${data.hora}:00.000Z`);
+     // Validar que la fecha y hora no sean del pasado
+    const [anio, mes, dia] = data.fecha.split("-").map(Number);
+    const fechaHoraTurno = new Date(anio, mes - 1, dia, h, m, 0, 0); // hora local 
+      if (fechaHoraTurno < new Date()) {
+        return { error: "No se puede crear un turno en una fecha u hora que ya pasó." };
+      }
     const existente = await db.turno.findFirst({
       where: {
         cuil_contador: BigInt(data.cuilContador),
@@ -55,12 +61,17 @@ export async function editarTurno(data: {
   if (permiso.error) return { error: permiso.error };
 
   try {
-    
-    const [hO, minO] = data.horaActual.split(":").map(Number);
     const horaOld = new Date(`1970-01-01T${data.horaActual}:00.000Z`);
-
-    const [hN, minN] = data.nuevaHora.split(":").map(Number);
     const horaNew = new Date(`1970-01-01T${data.nuevaHora}:00.000Z`);
+
+     // Validar que la NUEVA fecha y hora no sean del pasado
+    const [hN, minN] = data.nuevaHora.split(":").map(Number);
+    const [anio, mes, dia] = data.nuevaFecha.split("-").map(Number);
+    const nuevaFechaHora = new Date(anio, mes - 1, dia, hN, minN, 0, 0);
+    if (nuevaFechaHora < new Date()) {
+      return { error: "No se puede modificar el turno a una fecha u hora que ya pasó." };
+    }
+    
      const turnoActual = await db.turno.findFirst({
       where: {
         fecha: new Date(data.fechaActual),
@@ -123,6 +134,50 @@ export async function borrarTurno(data: {
     return { success: true };
   } catch {
     return { error: "Error al borrar el turno." };
+  }
+}
+
+  //cancelar turno reservado (admin) - notificar al cliente
+export async function cancelarTurno(data: {
+  fecha: string;
+  hora: string;
+  cuilContador: string;
+}) {
+  const permiso = await verificarRol("admin");
+  if (permiso.error) return { error: permiso.error };
+
+  try {
+    const horaDate = new Date(`1970-01-01T${data.hora}:00.000Z`);
+
+    const turno = await db.turno.findFirst({
+      where: {
+        fecha: new Date(data.fecha),
+        hora: horaDate,
+        cuil_contador: BigInt(data.cuilContador),
+      },
+      include: { cliente: true },
+    });
+
+    if (!turno) return { error: "Turno no encontrado." };
+    if (!turno.cliente) return { error: "Este turno no tiene un cliente reservado." };
+
+    // pendiente: enviar mail de notificación al cliente (turno.cliente.email)
+
+
+    await db.turno.delete({
+      where: {
+        fecha_hora_cuil_contador: {
+          fecha: new Date(data.fecha),
+          hora: horaDate,
+          cuil_contador: BigInt(data.cuilContador),
+        },
+      },
+    });
+
+    revalidatePath("/dashboard/turnos");
+    return { success: true };
+  } catch {
+    return { error: "Error al cancelar el turno." };
   }
 }
   //Reserva un turno disponible (cliente)
