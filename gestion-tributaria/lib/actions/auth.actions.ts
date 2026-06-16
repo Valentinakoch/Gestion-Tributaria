@@ -43,6 +43,9 @@ export async function saveCuil(cuil: string) {
     const client = await clerkClient();
 
     if (contador) {
+      if (contador.clerk_id && contador.clerk_id !== userId) {
+        return { error: "Este CUIL ya tiene una cuenta asociada." };
+      }
       await db.contador.update({
         where: { cuil: cuilNumber },
         data: { clerk_id: userId },
@@ -51,6 +54,9 @@ export async function saveCuil(cuil: string) {
         publicMetadata: { role: "admin" },
       });
     } else if (cliente) {
+      if (cliente.clerk_id && cliente.clerk_id !== userId) {
+        return { error: "Este CUIL ya tiene una cuenta asociada." };
+      }
       await db.cliente.update({
         where: { cuil: cuilNumber },
         data: { clerk_id: userId },

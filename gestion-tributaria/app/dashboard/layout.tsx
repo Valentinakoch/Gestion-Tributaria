@@ -5,24 +5,20 @@ import Sidebar from "@/components/sidebar";
 import CuilSetup from "@/components/cuil-setup";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { userId, sessionClaims } = await auth();
+  const { userId } = await auth();
   if (!userId) redirect("/sign-in");
-
-  const role = (sessionClaims?.metadata as { role?: string } | undefined)?.role;
 
   const user = await currentUser();
   const nombreUsuario = `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || "Usuario";
 
-  if (!role) {
-    const contador = await db.contador.findFirst({ where: { clerk_id: userId } });
-    const cliente = await db.cliente.findFirst({ where: { clerk_id: userId } });
+  const contador = await db.contador.findFirst({ where: { clerk_id: userId } });
+  const cliente = await db.cliente.findFirst({ where: { clerk_id: userId } });
 
-    if (!contador && !cliente) {
-      return <CuilSetup userName={nombreUsuario} />;
-    }
+  if (!contador && !cliente) {
+    return <CuilSetup userName={nombreUsuario} />;
   }
 
-  const userRole = role === "admin" ? "ADMIN" : "CLIENTE";
+  const userRole: "ADMIN" | "CLIENTE" = contador ? "ADMIN" : "CLIENTE";
 
   return (
     <div className="flex min-h-screen bg-[#f8fafc]">
