@@ -72,7 +72,7 @@ export default function EntidadesAdmin({ entidades }: Props) {
       ? await modificarEntidadTributaria(editando.id, { url })
       : await crearEntidadTributaria({ nombre, url });
 
-    if (resultado.success) {
+    if ("success" in resultado && resultado.success) {
       setMensaje({
         tipo: "ok",
         texto: editando
@@ -97,7 +97,7 @@ export default function EntidadesAdmin({ entidades }: Props) {
     setMensaje(null);
     const resultado = await eliminarEntidadTributaria(entidadAEliminar.id);
 
-    if (resultado.success) {
+    if ("success" in resultado && resultado.success) {
       if (editando?.id === entidadAEliminar.id) limpiarFormulario();
       setEntidadAEliminar(null);
       setMensaje({ tipo: "ok", texto: "Entidad eliminada correctamente." });
