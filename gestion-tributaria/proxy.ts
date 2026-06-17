@@ -12,9 +12,7 @@ const clerkHandler = clerkMiddleware(async (auth, request) => {
   const { userId } = await auth()
   const currentUrl = new URL(request.url)
 
-  // Si ya está logueado y accede a las rutas de auth, lo mandamos al dashboard.
-  // No redirigimos automáticamente desde '/' porque el dashboard puede necesitar
-  // completar el perfil antes de que tenga sentido volver a root.
+  // Si ya está logueado y accede a sign-in/sign-up, lo mandamos al dashboard
   if (userId && (currentUrl.pathname.startsWith('/sign-in') || currentUrl.pathname.startsWith('/sign-up'))) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }

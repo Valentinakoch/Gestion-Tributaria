@@ -50,7 +50,11 @@ model entidad_tributaria {
 }
 
 model estudio_contable {
-  id_estudio Int       @id @default(autoincrement())
+  id_estudio Int        @id @default(autoincrement())
+  nombre     String?
+  telefono   String?
+  email      String?
+  direccion  String?
   contador   contador[]
   cliente    cliente[]
 }
@@ -78,7 +82,9 @@ model liquidacion {
   estado                    String?
   cuil_cliente              BigInt?
   id_impuesto               Int?
-  numero_boleta_comprobante Int? @unique
+  numero_boleta_comprobante Int?         @unique
+  url_archivo               String?
+  vencimiento               DateTime?    @db.Date
   cliente                   cliente?     @relation(fields: [cuil_cliente], references: [cuil], onDelete: NoAction, onUpdate: NoAction, map: "cuil_cliente")
   impuesto                  impuesto?    @relation(fields: [id_impuesto], references: [id_impuesto], onDelete: NoAction, onUpdate: NoAction, map: "id_impuesto")
   comprobante               comprobante? @relation(fields: [numero_boleta_comprobante], references: [numero_boleta], onDelete: NoAction, onUpdate: NoAction, map: "numero_boleta")

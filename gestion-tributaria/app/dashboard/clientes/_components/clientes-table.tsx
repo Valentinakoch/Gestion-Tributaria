@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Users, Search, Plus, CheckCircle, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Users, Search, Plus, CheckCircle, AlertTriangle, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { eliminarCliente } from "../../../../lib/actions/clientes.actions";
 
 interface Cliente {
   cuil: string;
@@ -21,6 +22,9 @@ export default function ClientesTable({ clientes }: Props) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [confirmCuil, setConfirmCuil] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const filtered = clientes.filter(
     (c) =>
@@ -35,6 +39,23 @@ export default function ClientesTable({ clientes }: Props) {
   function goTo(p: number) {
     setPage(Math.max(1, Math.min(p, totalPages)));
   }
+
+  async function handleEliminar() {
+    if (!confirmCuil) return;
+    setDeleting(true);
+    setDeleteError(null);
+    const result = await eliminarCliente(confirmCuil);
+    if (result?.error) {
+      setDeleteError(result.error);
+      setDeleting(false);
+    } else {
+      setConfirmCuil(null);
+      setDeleting(false);
+      router.refresh();
+    }
+  }
+
+  const confirmNombre = clientes.find((c) => c.cuil === confirmCuil)?.nombre ?? "";
 
   return (
     <div>
@@ -112,8 +133,17 @@ export default function ClientesTable({ clientes }: Props) {
                       {c.estado === "pendiente" ? "Pendiente" : "Al día"}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right text-xs font-semibold text-blue-600">
-                    Ver detalle →
+                  <td className="px-6 py-4">
+                    <div className="flex items-center justify-end gap-3">
+                      <span className="text-xs font-semibold text-blue-600">Ver detalle</span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setConfirmCuil(c.cuil); }}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        title="Eliminar cliente"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -148,6 +178,42 @@ export default function ClientesTable({ clientes }: Props) {
           </div>
         )}
       </div>
+
+      {/* Modal de confirmación */}
+      {confirmCuil && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
+            <div className="flex items-center justify-center h-12 w-12 rounded-full bg-red-50 mx-auto mb-4">
+              <Trash2 className="h-5 w-5 text-red-600" />
+            </div>
+            <h2 className="text-base font-bold text-slate-900 text-center mb-1">Eliminar cliente</h2>
+            <p className="text-sm text-slate-500 text-center mb-4">
+              ¿Estás segura de que querés eliminar a <span className="font-semibold text-slate-800">{confirmNombre}</span>? Esta acción no se puede deshacer.
+            </p>
+            {deleteError && (
+              <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2 mb-4 text-center">
+                {deleteError}
+              </p>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setConfirmCuil(null); setDeleteError(null); }}
+                disabled={deleting}
+                className="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleEliminar}
+                disabled={deleting}
+                className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+              >
+                {deleting ? "Eliminando..." : "Eliminar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
