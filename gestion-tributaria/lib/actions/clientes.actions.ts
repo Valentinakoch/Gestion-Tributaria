@@ -82,3 +82,54 @@ export async function actualizarCliente(cuil: string, data: {
     return { error: "Error al actualizar el cliente." };
   }
 }
+
+export async function eliminarCliente(cuil: string) {
+  const { userId } = await auth();
+  if (!userId) return { error: "No autenticado." };
+
+  const contador = await db.contador.findFirst({ where: { clerk_id: userId } });
+  if (!contador) return { error: "No tenés permisos de administrador." };
+
+  const cuilBig = BigInt(cuil);
+
+  try {
+    const cliente = await db.cliente.findUnique({ where: { cuil: cuilBig } });
+    if (!cliente) return { error: "Cliente no encontrado." };
+    if (cliente.contador !== contador.cuil) return { error: "No tenés permiso para eliminar este cliente." };
+
+    await db.$transaction(async (tx) => {
+      // Liberar turnos reservados por el cliente (cuil_cliente es nullable)
+      await tx.turno.updateMany({
+        where: { cuil_cliente: cuilBig },
+        data: { cuil_cliente: null },
+      });
+
+      // Obtener comprobantes antes de borrar liquidaciones
+      const liquidaciones = await tx.liquidacion.findMany({
+        where: { cuil_cliente: cuilBig },
+        select: { numero_boleta_comprobante: true },
+      });
+
+      await tx.liquidacion.deleteMany({ where: { cuil_cliente: cuilBig } });
+
+      const comprobanteIds = liquidaciones
+        .map((l) => l.numero_boleta_comprobante)
+        .filter((id): id is number => id !== null);
+
+      if (comprobanteIds.length > 0) {
+        await tx.comprobante.deleteMany({
+          where: { numero_boleta: { in: comprobanteIds } },
+        });
+      }
+
+      await tx.inscripto_en.deleteMany({ where: { cuil_cliente: cuilBig } });
+
+      await tx.cliente.delete({ where: { cuil: cuilBig } });
+    });
+
+    revalidatePath("/dashboard/clientes");
+    return { success: true };
+  } catch {
+    return { error: "Error al eliminar el cliente." };
+  }
+}

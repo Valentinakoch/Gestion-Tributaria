@@ -3,6 +3,7 @@ import { Building2 } from "lucide-react";
 import { redirect } from "next/navigation";
 import { db } from "../../../lib/prisma";
 import EntidadesAdmin from "./_components/entidades-admin";
+import BackButton from "@/components/back-button";
 
 export default async function EntidadesPage() {
   const { userId } = await auth();
@@ -33,6 +34,7 @@ export default async function EntidadesPage() {
 
   return (
     <div>
+      <BackButton label="Volver al panel" href="/dashboard/clientes" />
       <header className="flex items-center gap-3 mb-8">
         <div className="h-10 w-10 rounded-xl bg-brand-dark flex items-center justify-center text-white">
           <Building2 className="h-5 w-5" />

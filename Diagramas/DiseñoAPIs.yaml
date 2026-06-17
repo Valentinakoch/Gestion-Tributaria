@@ -13,7 +13,7 @@ tags:
   - name: Email
     description: Envío de resúmenes impositivos y recepción de respuestas de clientes. Mapea con app/api/emails/
   - name: WhatsApp
-    description: Envío de alertas de vencimiento y procesamiento de respuestas de clientes. Mapea con app/api/whatsapp/
+    description: Recepción de mensajes entrantes iniciados por el cliente desde su celular. Mapea con app/api/whatsapp/
   - name: Calendar
     description: Sincronización y gestión de turnos con Google Calendar mapeados sobre la tabla física 'turno'. Mapea con app/api/turnos/
   - name: Clientes
@@ -25,62 +25,41 @@ tags:
 
 paths:
   # =========================================================================
-  # 1. MODULO CHAT (Ruta física: app/api/mensajes/route.js)
+  # 1. MODULO CHAT (Ruta física: app/api/mensajes/token/route.ts)
   # =========================================================================
-  /mensajes:
-    post:
-      summary: Transmitir un mensaje de chat interno
-      description: Envía y distribuye un mensaje en tiempo real a través de la plataforma web entre un cliente y un contador (sin persistencia histórica en base de datos).
+  /mensajes/token:
+    get:
+      summary: Obtener token de Stream Chat
+      description: Genera y devuelve un token de autenticación de Stream Chat para el usuario autenticado con Clerk. El frontend lo usa para conectarse al canal privado con su contador o cliente asignado. El historial y tiempo real son gestionados íntegramente por Stream Chat (sin persistencia en Neon DB).
       tags:
         - Chat
       security:
         - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - cuilEmisor
-                - cuilReceptor
-                - contenido
-              properties:
-                cuilEmisor:
-                  type: integer
-                  example: 20123456781
-                  description: Debe coincidir con el CUIL_usuario de la tabla usuario (Neon DB).
-                cuilReceptor:
-                  type: integer
-                  example: 27123456789
-                  description: Debe coincidir con el CUIL_usuario de la tabla usuario (Neon DB).
-                contenido:
-                  type: string
-                  example: "Hola, ya subí el comprobante de la liquidación de IVA."
       responses:
-        '201':
-          description: Mensaje transmitido con éxito en tiempo real.
+        '200':
+          description: Token generado correctamente.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  idMensajeTransitorio:
+                  token:
                     type: string
-                    format: uuid
-                    example: "3b291a14-722a-4122-b913-912a73315a67"
-                  enviadoEn:
+                    example: "eyJhbGciOiJIUzI1NiJ9..."
+                  userId:
                     type: string
-                    format: date-time
-                    example: "2026-06-03T14:15:00Z"
-        '400':
-          description: Estructura de mensaje inválida.
+                    example: "cuil_20123456781"
+                  nombre:
+                    type: string
+                    example: "María García"
+        '401':
+          description: Token JWT de Clerk inválido o ausente.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '401':
-          description: Token JWT de Clerk inválido o ausente.
+        '404':
+          description: El usuario autenticado no tiene registro en la base de datos.
           content:
             application/json:
               schema:
@@ -162,39 +141,10 @@ paths:
   # =========================================================================
   # 3. MODULO WHATSAPP
   # =========================================================================
-  /whatsapp/alertas: # Ruta física: app/api/whatsapp/alertas/route.js
-    post:
-      summary: Enviar mensaje saliente por WhatsApp
-      description: Envía una alerta automatizada de vencimiento utilizando el número de teléfono nativo del cliente.
-      tags:
-        - WhatsApp
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - numeroTelefono
-                - mensajeTexto
-              properties:
-                numeroTelefono:
-                  type: integer
-                  example: 542914555555
-                  description: Corresponde al atributo 'telefono' (INTEGER) de la tabla 'usuario'.
-                mensajeTexto:
-                  type: string
-                  example: "Su liquidación de Ingresos Brutos vence en 48hs."
-      responses:
-        '202':
-          description: Alerta aceptada por el gateway externo.
-
   /whatsapp/webhook: # Ruta física: app/api/whatsapp/webhook/route.js
     post:
-      summary: Recibir mensajes desde WhatsApp (Webhook de Meta)
-      description: Meta invoca esta ruta pública cuando el cliente responde desde su celular. El backend toma el 'telefonoRemitente' y lo mapea con 'usuario.telefono'.
+      summary: Recibir mensaje entrante de WhatsApp (Webhook de Meta)
+      description: Meta invoca esta ruta pública cuando el cliente inicia una conversación desde su celular. El backend toma el 'telefonoRemitente' y lo mapea con 'usuario.telefono' para identificarlo y notificar al contador en tiempo real.
       tags:
         - WhatsApp
       requestBody:
@@ -210,13 +160,13 @@ paths:
                 telefonoRemitente:
                   type: integer
                   example: 542914555555
-                  description: Clave de búsqueda para matchear con el campo 'telefono' de la base de datos.
+                  description: Clave de búsqueda para matchear con el campo 'telefono' de la tabla 'usuario'.
                 texto:
                   type: string
                   example: "Hola! ¿Me podés pasar el link de nuevo?"
       responses:
         '200':
-          description: Evento recibido y despachado al frontend de React en tiempo real.
+          description: Evento recibido y despachado al frontend del contador en tiempo real.
         '404':
           description: El teléfono remitente no pertenece a ningún usuario activo.
           content:
