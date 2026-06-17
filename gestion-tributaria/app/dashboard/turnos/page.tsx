@@ -67,22 +67,56 @@ export default async function TurnosPage() {
   const cliente = await db.cliente.findFirst({ where: { clerk_id: userId } });
   if (!cliente) redirect("/dashboard");
 
-  const turnosCliente = await db.turno.findMany({
-    where: { cuil_cliente: cliente.cuil },
-    include: {
-      contador: { select: { nombre: true, apellido: true } },
-    },
+  const [turnosDisponibles, misTurnos, contadores] = await Promise.all([
+  db.turno.findMany({
+    where: { cuil_cliente: null },
+    include: { contador: { select: { nombre: true, apellido: true, cuil: true } } },
     orderBy: [{ fecha: "asc" }, { hora: "asc" }],
-  });
+  }),
+  db.turno.findMany({
+    where: { cuil_cliente: cliente.cuil },
+    include: { contador: { select: { nombre: true, apellido: true } } },
+    orderBy: [{ fecha: "asc" }, { hora: "asc" }],
+  }),
+  db.contador.findMany({ select: { cuil: true, nombre: true, apellido: true } }),
+]);
 
-  const turnosClienteData = turnosCliente.map((t) => ({
-    id: `${t.fecha.toISOString()}-${t.hora.toISOString()}-${t.cuil_cliente}-${t.cuil_contador}`,
-    fecha: t.fecha.toLocaleDateString("es-AR"),
-    hora: t.hora.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }),
-    adminNombre:
-      [t.contador?.nombre, t.contador?.apellido].filter(Boolean).join(" ") || "Admin",
-  }));
+ function formatearTurno(fecha: Date, hora: Date) {
+  const fechaStr = `${String(fecha.getUTCDate()).padStart(2, "0")}/${String(fecha.getUTCMonth() + 1).padStart(2, "0")}/${fecha.getUTCFullYear()}`;
+  const fechaIso = `${fecha.getUTCFullYear()}-${String(fecha.getUTCMonth() + 1).padStart(2, "0")}-${String(fecha.getUTCDate()).padStart(2, "0")}`;
+  const horaStr = `${String(hora.getUTCHours()).padStart(2, "0")}:${String(hora.getUTCMinutes()).padStart(2, "0")}`;
+  return { fechaStr, fechaIso, horaStr };
+}
+ const disponiblesData = turnosDisponibles.map((t) => {
+  const { fechaStr, fechaIso, horaStr } = formatearTurno(t.fecha, t.hora);
+  return {
+    id: `${t.fecha.toISOString()}-${t.hora.toISOString()}-${t.cuil_contador}`,
+    fecha: fechaStr,
+    fechaIso,
+    hora: horaStr,
+    horaIso: horaStr,
+    cuilContador: t.cuil_contador.toString(),
+    adminNombre: [t.contador?.nombre, t.contador?.apellido].filter(Boolean).join(" ") || "Profesional",
+  };
+});
 
+const misTurnosData = misTurnos.map((t) => {
+  const { fechaStr, fechaIso, horaStr } = formatearTurno(t.fecha, t.hora);
+  return {
+    id: `${t.fecha.toISOString()}-${t.hora.toISOString()}-${t.cuil_contador}`,
+    fecha: fechaStr,
+    fechaIso,
+    hora: horaStr,
+    horaIso: horaStr,
+    cuilContador: t.cuil_contador.toString(),
+    adminNombre: [t.contador?.nombre, t.contador?.apellido].filter(Boolean).join(" ") || "Profesional",
+  };
+});
+
+const contadoresData = contadores.map((c) => ({
+  cuil: c.cuil.toString(),
+  nombre: [c.nombre, c.apellido].filter(Boolean).join(" ") || `Profesional CUIL: ${c.cuil}`,
+}));
   return (
     <div>
       <header className="flex items-center gap-3 mb-8">
@@ -94,7 +128,9 @@ export default async function TurnosPage() {
           <p className="text-sm text-slate-500">Reservá una cita, {nombreUsuario}</p>
         </div>
       </header>
-      <TurnoForm turnos={turnosClienteData} />
+      <TurnoForm  turnosDisponibles={disponiblesData}
+      misTurnos={misTurnosData}
+      contadores={contadoresData} />
     </div>
   );
 }

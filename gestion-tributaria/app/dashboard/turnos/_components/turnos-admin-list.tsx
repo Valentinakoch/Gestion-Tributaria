@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Calendar, Clock, User, Trash2, Settings, X, Search, ChevronLeft, ChevronRight, Plus, BanIcon } from "lucide-react";
-import { editarTurno, borrarTurno, crearTurno } from "../../../../lib/actions/turnos.actions";
+import { editarTurno, borrarTurno, crearTurno, cancelarTurno } from "../../../../lib/actions/turnos.actions";
 import CustomSelect from "@/components/custom-select";
 
 interface TurnoData {
@@ -171,7 +171,7 @@ export default function TurnosAdminList({ turnos, admins }: Props) {
     setCargando(false);
   }
 
-  // — Handler deshabilitar/cancelar —
+  // — Handler deshabilitar —
   async function handleBorrar(t: TurnoData) {
     const confirmMsg = t.reservado
       ? `¿Cancelar el turno de ${t.cliente} el ${t.fecha} a las ${t.hora}?`
@@ -194,6 +194,24 @@ export default function TurnosAdminList({ turnos, admins }: Props) {
       setMensaje({ tipo: "error", texto: res.error || "Error al eliminar el turno." });
     }
   }
+
+  // — Handler cancelar —
+  async function handleCancelar(t: TurnoData) {
+  if (!confirm(`¿Cancelar el turno de ${t.cliente} el ${t.fecha} a las ${t.hora}? Se notificará al cliente por mail.`)) return;
+  setMensaje(null);
+
+  const res = await cancelarTurno({
+    fecha: t.fechaIso,
+    hora: t.horaIso,
+    cuilContador: t.cuilContador,
+  });
+
+  if (res.success) {
+    setMensaje({ tipo: "ok", texto: "Turno cancelado y cliente notificado." });
+  } else {
+    setMensaje({ tipo: "error", texto: res.error || "Error al cancelar el turno." });
+  }
+}
    // — Handlers modal crear —
   function abrirModalCrear() {
     setNuevaFecha("");
@@ -327,24 +345,31 @@ export default function TurnosAdminList({ turnos, admins }: Props) {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => abrirModalEditar(t)}
-                  className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 transition-colors"
-                >
-                  <Settings className="h-3 w-3" />
-                  Modificar
-                </button>
-                <button
-                  onClick={() => handleBorrar(t)}
-                  className={`flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
-                    t.reservado
-                      ? "text-orange-600 hover:bg-orange-50 border-orange-100"
-                      : "text-red-600 hover:bg-red-50 border-red-100"
-                  }`}
-                >
-                  {t.reservado ? <BanIcon className="h-3 w-3" /> : <Trash2 className="h-3 w-3" />}
-                  {t.reservado ? "Cancelar" : "Deshabilitar"}
-                </button>
+               
+    {/* Modificar: solo si está disponible */}
+    {!t.reservado && (
+      <button
+        onClick={() => abrirModalEditar(t)}
+        className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 transition-colors"
+      >
+        <Settings className="h-3 w-3" />
+        Modificar
+      </button>
+    )}
+
+    {/* Deshabilitar (disponible) o Cancelar (reservado) */}
+    <button
+      onClick={() => (t.reservado ? handleCancelar(t) : handleBorrar(t))}
+      className={`flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
+        t.reservado
+          ? "text-orange-600 hover:bg-orange-50 border-orange-100"
+          : "text-red-600 hover:bg-red-50 border-red-100"
+      }`}
+    >
+      {t.reservado ? <BanIcon className="h-3 w-3" /> : <Trash2 className="h-3 w-3" />}
+      {t.reservado ? "Cancelar" : "Deshabilitar"}
+    </button>
+
               </div>
             </div>
           ))}
