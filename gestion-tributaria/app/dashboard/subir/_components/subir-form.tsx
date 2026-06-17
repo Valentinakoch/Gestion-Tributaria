@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { crearLiquidacion } from "../../../../lib/actions/liquidaciones.actions";
-import { User, Receipt, DollarSign, Calendar, Loader2, Upload, CheckCircle, AlertTriangle, ArrowLeft, FileText, X } from "lucide-react";
+import { crearLiquidacion, validarLiquidacion } from "../../../../lib/actions/liquidaciones.actions";
+import { User, Receipt, DollarSign, Calendar, Loader2, Upload, CheckCircle, AlertTriangle, ArrowLeft, FileText, X, ClipboardCheck } from "lucide-react";
 import CustomSelect from "@/components/custom-select";
 
 interface Cliente {
@@ -21,10 +21,22 @@ interface Props {
   impuestos: Impuesto[];
 }
 
+interface Validacion {
+  cuilCliente: string;
+  nombreCliente: string;
+  idImpuesto: number;
+  tipoImpuesto: string;
+  monto: number;
+  periodo: string;
+  vencimiento: string;
+  nombreArchivo: string;
+  tamanoArchivo: string;
+}
+
 function formatMonto(raw: string): string {
   const cleaned = raw.replace(/[^\d,]/g, "");
   const parts = cleaned.split(",");
-  const integerPart = parts[0];
+  const integerPart = parts[0] || "";
   const decimalPart = parts.length > 1 ? "," + parts.slice(1).join("") : "";
   if (!integerPart) return decimalPart ? "0" + decimalPart : "";
   const formatted = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -37,13 +49,9 @@ function parseMonto(formatted: string): number {
 }
 
 function formatPeriodo(raw: string): string {
-  const digits = raw.replace(/\D/g, "").slice(0, 8);
-  let result = "";
-  for (let i = 0; i < digits.length; i++) {
-    if (i === 2 || i === 4) result += "/";
-    result += digits[i];
-  }
-  return result;
+  const digits = raw.replace(/\D/g, "").slice(0, 6);
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
 }
 
 export default function SubirForm({ clientes, impuestos }: Props) {
@@ -51,9 +59,11 @@ export default function SubirForm({ clientes, impuestos }: Props) {
   const [impuestoId, setImpuestoId] = useState("");
   const [montoDisplay, setMontoDisplay] = useState("");
   const [periodo, setPeriodo] = useState("");
+  const [vencimiento, setVencimiento] = useState("");
   const [subiendo, setSubiendo] = useState(false);
   const [archivo, setArchivo] = useState<File | null>(null);
   const [mensaje, setMensaje] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
+  const [validacion, setValidacion] = useState<Validacion | null>(null);
 
   function handleMontoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = e.target.value;
@@ -75,12 +85,12 @@ export default function SubirForm({ clientes, impuestos }: Props) {
     }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleValidar(e: React.FormEvent) {
     e.preventDefault();
     setSubiendo(true);
     setMensaje(null);
 
-    if (!clienteId || !impuestoId || !montoDisplay || !periodo || !archivo) {
+    if (!clienteId || !impuestoId || !montoDisplay || !periodo || !vencimiento || !archivo) {
       setMensaje({ tipo: "error", texto: "Completá todos los campos." });
       setSubiendo(false);
       return;
@@ -93,36 +103,170 @@ export default function SubirForm({ clientes, impuestos }: Props) {
       return;
     }
 
-    const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-    const match = periodo.match(dateRegex);
-    if (!match) {
-      setMensaje({ tipo: "error", texto: "La fecha debe tener el formato dd/mm/aaaa." });
+    const fechaPeriodoRegex = /^(\d{2})\/(\d{4})$/;
+    const matchPeriodo = periodo.match(fechaPeriodoRegex);
+    if (!matchPeriodo) {
+      setMensaje({ tipo: "error", texto: "El período fiscal debe tener el formato mm/aaaa." });
       setSubiendo(false);
       return;
     }
-    const periodoFormateado = `${match[3]}-${match[2]}-${match[1]}`;
 
-    // Usamos FormData para enviar el archivo de forma segura
+    const fechaVencimiento = new Date(vencimiento);
+    if (Number.isNaN(fechaVencimiento.getTime())) {
+      setMensaje({ tipo: "error", texto: "La fecha de vencimiento no es válida." });
+      setSubiendo(false);
+      return;
+    }
+
+    const periodoFormateado = `${matchPeriodo[2]}-${matchPeriodo[1]}`;
+
+    try {
+      const fd = new FormData();
+      fd.append("cuilCliente", clienteId);
+      fd.append("idImpuesto", impuestoId);
+      fd.append("monto", montoNumerico.toString());
+      fd.append("periodo", periodoFormateado);
+      fd.append("vencimiento", vencimiento);
+      fd.append("archivo", archivo);
+
+      setMensaje({ tipo: "ok", texto: "Validando datos..." });
+      const res = await validarLiquidacion(fd);
+
+      if (res.success && res.validacion) {
+        setValidacion(res.validacion);
+        setMensaje(null);
+      } else {
+        setMensaje({ tipo: "error", texto: res.error || "Error al validar la liquidación." });
+      }
+    } catch (error) {
+      console.error("Error en validación:", error);
+      setMensaje({ tipo: "error", texto: "Error inesperado al validar la liquidación." });
+    }
+
+    setSubiendo(false);
+  }
+
+  async function handleConfirmar() {
+    if (!validacion) return;
+    setSubiendo(true);
+    setMensaje(null);
+
     const fd = new FormData();
-    fd.append("cuilCliente", clienteId);
-    fd.append("idImpuesto", impuestoId);
-    fd.append("monto", montoNumerico.toString());
-    fd.append("periodo", periodoFormateado);
-    fd.append("archivo", archivo);
+    fd.append("cuilCliente", validacion.cuilCliente);
+    fd.append("idImpuesto", String(validacion.idImpuesto));
+    fd.append("monto", String(validacion.monto));
+    fd.append("periodo", validacion.periodo);
+    fd.append("vencimiento", vencimiento);
+    fd.append("archivo", archivo!);
 
     const res = await crearLiquidacion(fd);
 
     if (res.success) {
       setMensaje({ tipo: "ok", texto: "Liquidación creada correctamente." });
+      setValidacion(null);
+      setClienteId("");
+      setImpuestoId("");
       setMontoDisplay("");
       setPeriodo("");
+      setVencimiento("");
       setArchivo(null);
     } else {
       setMensaje({ tipo: "error", texto: res.error || "Error al crear la liquidación." });
     }
+
     setSubiendo(false);
   }
 
+  function handleCancelarValidacion() {
+    setValidacion(null);
+  }
+
+  // Si hay validación, mostrar resumen y confirmar
+  if (validacion) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 space-y-6">
+          <div className="flex items-center gap-3 pb-2 border-b border-slate-100">
+            <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center">
+              <ClipboardCheck className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Confirmación de Liquidación</h2>
+              <p className="text-xs text-slate-400">Revisá los datos antes de confirmar</p>
+            </div>
+          </div>
+
+          {mensaje && (
+            <div className={`flex items-center gap-2 p-3 rounded-xl text-sm font-medium ${mensaje.tipo === "ok" ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"}`}>
+              {mensaje.tipo === "ok" ? <CheckCircle className="h-4 w-4 shrink-0" /> : <AlertTriangle className="h-4 w-4 shrink-0" />} {mensaje.texto}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <p className="text-base font-medium text-slate-900 mt-1">{validacion.nombreCliente}</p>
+              <p className="text-xs text-slate-500 mt-0.5">CUIL: {validacion.cuilCliente}</p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Tipo de Impuesto</p>
+              <p className="text-base font-medium text-slate-900 mt-1">{validacion.tipoImpuesto}</p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Monto</p>
+              <p className="text-lg font-bold text-blue-600 mt-1">$ {validacion.monto.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Período Fiscal</p>
+              <p className="text-base font-medium text-slate-900 mt-1">{validacion.periodo}</p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Vencimiento</p>
+              <p className="text-base font-medium text-slate-900 mt-1">{validacion.vencimiento}</p>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={handleCancelarValidacion}
+              disabled={subiendo}
+              className="flex-1 bg-slate-200 text-slate-900 font-semibold rounded-xl px-6 py-3 hover:bg-slate-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Volver a Editar
+            </button>
+
+            <button
+              onClick={handleConfirmar}
+              disabled={subiendo}
+              className="flex-1 bg-emerald-600 text-white font-semibold rounded-xl px-6 py-3 hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {subiendo ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4" />
+                  Confirmar y Guardar
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        <Link href="/dashboard" className="mt-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition-colors">
+          <ArrowLeft className="h-4 w-4" />
+          Volver al panel
+        </Link>
+      </div>
+    );
+  }
+
+  // Mostrar formulario de entrada
   return (
     <div className="max-w-xl mx-auto">
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 space-y-6">
@@ -137,16 +281,12 @@ export default function SubirForm({ clientes, impuestos }: Props) {
         </div>
 
         {mensaje && (
-          <div
-            className={`flex items-center gap-2 p-3 rounded-xl text-sm font-medium ${
-              mensaje.tipo === "ok" ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"
-            }`}
-          >
+          <div className={`flex items-center gap-2 p-3 rounded-xl text-sm font-medium ${mensaje.tipo === "ok" ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"}`}>
             {mensaje.tipo === "ok" ? <CheckCircle className="h-4 w-4 shrink-0" /> : <AlertTriangle className="h-4 w-4 shrink-0" />} {mensaje.texto}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleValidar} className="space-y-4">
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
               <User className="h-4 w-4 text-slate-400" />
@@ -173,7 +313,7 @@ export default function SubirForm({ clientes, impuestos }: Props) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
                 <DollarSign className="h-4 w-4 text-slate-400" />
@@ -188,6 +328,7 @@ export default function SubirForm({ clientes, impuestos }: Props) {
                 className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
               />
             </div>
+
             <div>
               <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
                 <Calendar className="h-4 w-4 text-slate-400" />
@@ -198,8 +339,21 @@ export default function SubirForm({ clientes, impuestos }: Props) {
                 inputMode="numeric"
                 value={periodo}
                 onChange={handlePeriodoChange}
-                placeholder="dd/mm/aaaa"
-                maxLength={10}
+                placeholder="mm/aaaa"
+                maxLength={7}
+                className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
+                <Calendar className="h-4 w-4 text-slate-400" />
+                Vencimiento
+              </label>
+              <input
+                type="date"
+                value={vencimiento}
+                onChange={(e) => setVencimiento(e.target.value)}
                 className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
               />
             </div>
@@ -210,6 +364,7 @@ export default function SubirForm({ clientes, impuestos }: Props) {
               <FileText className="h-4 w-4 text-slate-400" />
               Comprobante (PDF)
             </label>
+
             <div className="relative">
               {!archivo ? (
                 <div className="flex items-center justify-center w-full">
@@ -231,8 +386,8 @@ export default function SubirForm({ clientes, impuestos }: Props) {
                     <p className="text-sm font-medium text-blue-900 truncate">{archivo.name}</p>
                     <p className="text-xs text-blue-500">{(archivo.size / 1024 / 1024).toFixed(2)} MB</p>
                   </div>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={() => setArchivo(null)}
                     className="p-1.5 hover:bg-white rounded-full text-slate-400 hover:text-red-500 transition-all"
                   >
@@ -251,22 +406,19 @@ export default function SubirForm({ clientes, impuestos }: Props) {
             {subiendo ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Subiendo...
+                Validando...
               </>
             ) : (
               <>
-                <Upload className="h-4 w-4" />
-                Subir e Informar al Cliente
+                <ClipboardCheck className="h-4 w-4" />
+                Validar y Revisar
               </>
             )}
           </button>
         </form>
       </div>
 
-      <Link
-        href="/dashboard"
-        className="mt-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition-colors"
-      >
+      <Link href="/dashboard" className="mt-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition-colors">
         <ArrowLeft className="h-4 w-4" />
         Volver al panel
       </Link>

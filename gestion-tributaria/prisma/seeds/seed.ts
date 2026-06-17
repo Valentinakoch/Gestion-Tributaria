@@ -278,6 +278,7 @@ async function main() {
       await prisma.liquidacion.create({
         data: {
           periodo_fiscal: new Date(2025, liq.mes, 15),
+          vencimiento: new Date(2025, liq.mes, 20),
           importe: liq.importe,
           estado: liq.estado,
           cuil_cliente: clienteCuil,

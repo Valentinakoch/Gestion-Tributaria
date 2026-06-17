@@ -75,6 +75,7 @@ model inscripto_en {
 model liquidacion {
   numero_boleta             Int          @id @default(autoincrement())
   periodo_fiscal            DateTime?    @db.Date
+  vencimiento               DateTime?    @db.Date
   importe                   Float?       @db.Real
   estado                    String?
   cuil_cliente              BigInt?
