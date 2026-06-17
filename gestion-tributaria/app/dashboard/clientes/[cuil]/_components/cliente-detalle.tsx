@@ -74,13 +74,15 @@ export default function ClienteDetalle({ cliente, liquidaciones }: Props) {
             <h1 className="text-2xl font-bold text-slate-900">{cliente.nombre}</h1>
             <p className="text-sm text-slate-500 mt-0.5">Ficha del cliente</p>
           </div>
-          <button
-            onClick={() => router.push(`/dashboard/clientes/${cliente.cuil}/editar`)}
-            className="flex items-center gap-2 text-sm font-semibold text-slate-700 border border-slate-200 px-4 py-2 rounded-xl hover:bg-slate-50 transition-colors"
-          >
-            <Pencil className="h-4 w-4" />
-            Editar datos
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => router.push(`/dashboard/clientes/${cliente.cuil}/editar`)}
+              className="flex items-center gap-2 text-sm font-semibold text-slate-700 border border-slate-200 px-4 py-2 rounded-xl hover:bg-slate-50 transition-colors"
+            >
+              <Pencil className="h-4 w-4" />
+              Editar datos
+            </button>
+          </div>
         </div>
       </div>
 

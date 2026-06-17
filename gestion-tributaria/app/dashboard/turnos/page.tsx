@@ -4,6 +4,7 @@ import { db } from "../../../lib/prisma";
 import { Calendar } from "lucide-react";
 import TurnoForm from "./_components/turno-form";
 import TurnosAdminList from "./_components/turnos-admin-list";
+import BackButton from "@/components/back-button";
 
 export default async function TurnosPage() {
   const { userId } = await auth();
@@ -49,6 +50,7 @@ export default async function TurnosPage() {
 
     return (
       <div>
+        <BackButton label="Volver al panel" href="/dashboard/clientes" />
         <header className="flex items-center gap-3 mb-8">
           <div className="h-10 w-10 rounded-xl bg-brand-dark flex items-center justify-center text-white">
             <Calendar className="h-5 w-5" />
@@ -85,6 +87,7 @@ export default async function TurnosPage() {
 
   return (
     <div>
+      <BackButton label="Volver al panel" href="/dashboard" />
       <header className="flex items-center gap-3 mb-8">
         <div className="h-10 w-10 rounded-xl bg-brand-dark flex items-center justify-center text-white">
           <Calendar className="h-5 w-5" />
