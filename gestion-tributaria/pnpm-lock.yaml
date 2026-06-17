@@ -17,6 +17,9 @@ importers:
       '@prisma/client':
         specifier: ^7.8.0
         version: 7.8.0(prisma@7.8.0(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.9.3))(typescript@5.9.3)
+      '@tailwindcss/postcss':
+        specifier: ^4
+        version: 4.2.4
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
@@ -41,13 +44,13 @@ importers:
       stream-chat-react:
         specifier: ^14.4.1
         version: 14.4.1(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(stream-chat@9.47.0)(typescript@5.9.3)
+      tailwindcss:
+        specifier: ^4
+        version: 4.2.4
     devDependencies:
       '@prisma/config':
         specifier: ^7.8.0
         version: 7.8.0
-      '@tailwindcss/postcss':
-        specifier: ^4
-        version: 4.2.4
       '@types/node':
         specifier: ^20
         version: 20.19.39
@@ -72,9 +75,6 @@ importers:
       prisma:
         specifier: ^7.8.0
         version: 7.8.0(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.9.3)
-      tailwindcss:
-        specifier: ^4
-        version: 4.2.4
       tsx:
         specifier: ^4.22.3
         version: 4.22.3
