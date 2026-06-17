@@ -9,6 +9,11 @@ type EntidadInput = {
   url: string;
 };
 
+type ActionResult = {
+  success: boolean;
+  error?: string;
+};
+
 async function obtenerContadorActual() {
   const { userId } = await auth();
   if (!userId) return null;
@@ -19,7 +24,7 @@ async function obtenerContadorActual() {
   });
 }
 
-function validarEntidad(data: EntidadInput) {
+function validarEntidad(data: EntidadInput): EntidadInput | { error: string } {
   const nombre = data.nombre.trim();
   const url = data.url.trim();
 
@@ -43,12 +48,12 @@ function validarEntidad(data: EntidadInput) {
   return { nombre, url };
 }
 
-export async function crearEntidadTributaria(data: EntidadInput) {
+export async function crearEntidadTributaria(data: EntidadInput): Promise<ActionResult> {
   const contador = await obtenerContadorActual();
-  if (!contador) return { error: "No autorizado." };
+  if (!contador) return { success: false, error: "No autorizado." };
 
   const validacion = validarEntidad(data);
-  if ("error" in validacion) return validacion;
+  if ("error" in validacion) return { success: false, error: validacion.error };
 
   const existente = await db.entidad_tributaria.findFirst({
     where: {
@@ -58,7 +63,7 @@ export async function crearEntidadTributaria(data: EntidadInput) {
   });
 
   if (existente) {
-    return { error: "Ya existe una entidad tributaria con ese nombre." };
+    return { success: false, error: "Ya existe una entidad tributaria con ese nombre." };
   }
 
   await db.entidad_tributaria.create({
@@ -75,24 +80,24 @@ export async function crearEntidadTributaria(data: EntidadInput) {
 export async function modificarEntidadTributaria(
   idEntidad: number,
   data: Pick<EntidadInput, "url">,
-) {
+): Promise<ActionResult> {
   const contador = await obtenerContadorActual();
-  if (!contador) return { error: "No autorizado." };
+  if (!contador) return { success: false, error: "No autorizado." };
   if (!Number.isInteger(idEntidad) || idEntidad <= 0) {
-    return { error: "Entidad inválida." };
+    return { success: false, error: "Entidad inválida." };
   }
 
   const entidad = await db.entidad_tributaria.findUnique({
     where: { id_entidad: idEntidad },
     select: { id_entidad: true, nombre: true },
   });
-  if (!entidad) return { error: "La entidad tributaria no existe." };
+  if (!entidad) return { success: false, error: "La entidad tributaria no existe." };
 
   const validacion = validarEntidad({
     nombre: entidad.nombre || "",
     url: data.url,
   });
-  if ("error" in validacion) return validacion;
+  if ("error" in validacion) return { success: false, error: validacion.error };
 
   await db.entidad_tributaria.update({
     where: { id_entidad: idEntidad },
@@ -105,11 +110,11 @@ export async function modificarEntidadTributaria(
   return { success: true };
 }
 
-export async function eliminarEntidadTributaria(idEntidad: number) {
+export async function eliminarEntidadTributaria(idEntidad: number): Promise<ActionResult> {
   const contador = await obtenerContadorActual();
-  if (!contador) return { error: "No autorizado." };
+  if (!contador) return { success: false, error: "No autorizado." };
   if (!Number.isInteger(idEntidad) || idEntidad <= 0) {
-    return { error: "Entidad inválida." };
+    return { success: false, error: "Entidad inválida." };
   }
 
   const entidad = await db.entidad_tributaria.findUnique({
@@ -120,9 +125,10 @@ export async function eliminarEntidadTributaria(idEntidad: number) {
     },
   });
 
-  if (!entidad) return { error: "La entidad tributaria no existe." };
+  if (!entidad) return { success: false, error: "La entidad tributaria no existe." };
   if (entidad._count.inscripto_en > 0) {
     return {
+      success: false,
       error: `No se puede eliminar: tiene ${entidad._count.inscripto_en} cliente(s) inscripto(s).`,
     };
   }
