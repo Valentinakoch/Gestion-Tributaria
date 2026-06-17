@@ -2,7 +2,6 @@ import { config } from "dotenv";
 import { PrismaClient } from "@prisma/client";
 import { PrismaNeon } from "@prisma/adapter-neon";
 
-// Cargar variables de entorno
 config({ path: ".env.local" });
 
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -15,85 +14,94 @@ const prisma = new PrismaClient({
   adapter: new PrismaNeon({ connectionString: DATABASE_URL }),
 });
 
-// Datos de admins ficticios
 const adminsData = [
   {
     clerkId: "user_3EJJs1npSpJinSKMvobwUsFwrJj",
     email: "admin@example.com",
-    name: "admin",
+    nombre: "admin",
+    apellido: null,
     cuil: "10987654321",
   },
   {
     clerkId: "user_ADMIN2_fake_id_123456789",
     email: "contador.perez@example.com",
-    name: "Juan Pérez",
+    nombre: "Juan",
+    apellido: "Pérez",
     cuil: "10456789123",
   },
   {
     clerkId: "user_ADMIN3_fake_id_987654321",
     email: "contador.garcia@example.com",
-    name: "María García",
+    nombre: "María",
+    apellido: "García",
     cuil: "10789123456",
   },
 ];
 
-// Datos de clientes ficticios - más clientes asignados al admin principal
 const clientesData = [
   {
     clerkId: "user_3EJJaBVKdlCqD40E4PglLpJyUPR",
     email: "cliente@example.com",
-    name: "cliente",
+    nombre: "cliente",
+    apellido: null,
     cuil: "20123456789",
-    adminIndex: 0, // admin@example.com
+    adminIndex: 0,
   },
   {
     clerkId: "user_CLIENT2_fake_id_111111111",
     email: "empresa.Lopez@example.com",
-    name: "Carlos López",
+    nombre: "Carlos",
+    apellido: "López",
     cuil: "20456789012",
-    adminIndex: 0, // admin@example.com
+    adminIndex: 0,
   },
   {
     clerkId: "user_CLIENT3_fake_id_222222222",
     email: "negocio.martinez@example.com",
-    name: "Laura Martínez",
+    nombre: "Laura",
+    apellido: "Martínez",
     cuil: "20789012345",
-    adminIndex: 0, // admin@example.com
+    adminIndex: 0,
   },
   {
     clerkId: "user_CLIENT4_fake_id_333333333",
     email: "empresa.rodriguez@example.com",
-    name: "Roberto Rodríguez",
+    nombre: "Roberto",
+    apellido: "Rodríguez",
     cuil: "20012345678",
-    adminIndex: 1, // Juan Pérez
+    adminIndex: 1,
   },
   {
     clerkId: "user_CLIENT5_fake_id_444444444",
     email: "empresa.fernandez@example.com",
-    name: "Ana Fernández",
+    nombre: "Ana",
+    apellido: "Fernández",
     cuil: "20345678901",
-    adminIndex: 0, // admin@example.com
+    adminIndex: 0,
   },
   {
     clerkId: "user_CLIENT6_fake_id_555555555",
     email: "negocio.sanchez@example.com",
-    name: "Pedro Sánchez",
+    nombre: "Pedro",
+    apellido: "Sánchez",
     cuil: "20678901234",
-    adminIndex: 2, // María García
+    adminIndex: 2,
   },
   {
     clerkId: "user_CLIENT7_fake_id_666666666",
     email: "empresa.torres@example.com",
-    name: "Santiago Torres",
+    nombre: "Santiago",
+    apellido: "Torres",
     cuil: "20901234567",
-    adminIndex: 0, // admin@example.com
+    adminIndex: 0,
   },
   {
     clerkId: "user_CLIENT8_fake_id_777777777",
     email: "negocio.moreno@example.com",
-    name: "Valentina Moreno",
+    nombre: "Valentina",
+    apellido: "Moreno",
     cuil: "20234567890",
-    adminIndex: 1, // Juan Pérez
+    adminIndex: 1,
   },
 ];
 
@@ -101,130 +109,78 @@ async function main() {
   try {
     console.log("🧹 Limpiando datos existentes...");
 
-    // Eliminar en orden de dependencias
     await prisma.turno.deleteMany();
     await prisma.inscripto_en.deleteMany();
     await prisma.liquidacion.deleteMany();
     await prisma.comprobante.deleteMany();
     await prisma.cliente.deleteMany();
     await prisma.contador.deleteMany();
-    await prisma.usuario.deleteMany();
-    await prisma.clerk_user.deleteMany();
     await prisma.impuesto.deleteMany();
     await prisma.entidad_tributaria.deleteMany();
     await prisma.estudio_contable.deleteMany();
 
     console.log("✓ Base de datos limpiada\n");
 
-    // Obtener o crear el estudio contable
     console.log("📁 Creando estudio contable...");
     const estudio = await prisma.estudio_contable.create({ data: {} });
     console.log("✓ Estudio contable creado:", estudio.id_estudio);
 
-    // Crear admins
     console.log("\n📋 Creando admins (contadores)...");
     for (const admin of adminsData) {
       const cuilNum = BigInt(admin.cuil);
 
-      // Crear usuario
-      await prisma.usuario.upsert({
-        where: { CUIL_usuario: cuilNum },
-        update: {
-          nombre_usuario: admin.name,
-          email: admin.email,
-        },
-        create: {
-          CUIL_usuario: cuilNum,
-          nombre_usuario: admin.name,
-          email: admin.email,
-        },
-      });
-
-      // Crear contador
       await prisma.contador.upsert({
         where: { cuil: cuilNum },
-        update: { id_estudio: estudio.id_estudio },
-        create: { cuil: cuilNum, id_estudio: estudio.id_estudio },
-      });
-
-      // Crear clerk_user
-      await prisma.clerk_user.upsert({
-        where: { id: admin.clerkId },
-        create: {
-          id: admin.clerkId,
-          email: admin.email,
-          firstName: admin.name,
-          cuil: admin.cuil,
-          rol: "admin",
-        },
         update: {
+          clerk_id: admin.clerkId,
+          nombre: admin.nombre,
+          apellido: admin.apellido,
           email: admin.email,
-          firstName: admin.name,
-          cuil: admin.cuil,
-          rol: "admin",
+          id_estudio: estudio.id_estudio,
+        },
+        create: {
+          cuil: cuilNum,
+          clerk_id: admin.clerkId,
+          nombre: admin.nombre,
+          apellido: admin.apellido,
+          email: admin.email,
+          id_estudio: estudio.id_estudio,
         },
       });
 
-      console.log(`  ✓ Admin: ${admin.name} (${admin.email})`);
+      console.log(`  ✓ Admin: ${admin.nombre} (${admin.email})`);
     }
 
-    // Crear clientes
     console.log("\n👥 Creando clientes...");
     for (const cliente of clientesData) {
       const cuilNum = BigInt(cliente.cuil);
       const adminCuil = BigInt(adminsData[cliente.adminIndex].cuil);
 
-      // Crear usuario
-      await prisma.usuario.upsert({
-        where: { CUIL_usuario: cuilNum },
-        update: {
-          nombre_usuario: cliente.name,
-          email: cliente.email,
-        },
-        create: {
-          CUIL_usuario: cuilNum,
-          nombre_usuario: cliente.name,
-          email: cliente.email,
-        },
-      });
-
-      // Crear cliente
       await prisma.cliente.upsert({
         where: { cuil: cuilNum },
         update: {
+          clerk_id: cliente.clerkId,
+          nombre: cliente.nombre,
+          apellido: cliente.apellido,
+          email: cliente.email,
           id_estudio: estudio.id_estudio,
           contador: adminCuil,
         },
         create: {
           cuil: cuilNum,
+          clerk_id: cliente.clerkId,
+          nombre: cliente.nombre,
+          apellido: cliente.apellido,
+          email: cliente.email,
           id_estudio: estudio.id_estudio,
           contador: adminCuil,
         },
       });
 
-      // Crear clerk_user
-      await prisma.clerk_user.upsert({
-        where: { id: cliente.clerkId },
-        create: {
-          id: cliente.clerkId,
-          email: cliente.email,
-          firstName: cliente.name,
-          cuil: cliente.cuil,
-          rol: "cliente",
-        },
-        update: {
-          email: cliente.email,
-          firstName: cliente.name,
-          cuil: cliente.cuil,
-          rol: "cliente",
-        },
-      });
-
-      const adminName = adminsData[cliente.adminIndex].name;
-      console.log(`  ✓ Cliente: ${cliente.name} (${cliente.email}) → asignado a ${adminName}`);
+      const adminName = adminsData[cliente.adminIndex].nombre;
+      console.log(`  ✓ Cliente: ${cliente.nombre} ${cliente.apellido ?? ""} → asignado a ${adminName}`);
     }
 
-    // Crear entidades tributarias
     console.log("\n🏛️ Creando entidades tributarias...");
     const entidadesMap: Record<string, number> = {};
     const entidadTributariaData = [
@@ -241,7 +197,6 @@ async function main() {
       console.log(`  ✓ ${entidad.nombre}`);
     }
 
-    // Crear impuestos
     console.log("\n💰 Creando impuestos...");
     const impuestosMap: Record<string, number> = {};
     const impuestosData = [
@@ -259,7 +214,6 @@ async function main() {
       console.log(`  ✓ ${impuesto.formato}`);
     }
 
-    // Crear inscripciones
     console.log("\n📋 Creando inscripciones en entidades...");
     const inscripcionesData = [
       { clienteIndex: 0, entidad: "AFIP", clave: "afip-20123456789" },
@@ -288,7 +242,6 @@ async function main() {
     }
     console.log(`  ✓ ${inscripcionesData.length} inscripciones creadas`);
 
-    // Crear liquidaciones y comprobantes
     console.log("\n📊 Creando liquidaciones y comprobantes...");
     const liquidacionesData = [
       { clienteIndex: 0, impuesto: "IVA", mes: 0, importe: 15000.50, estado: "PAGADO" },
@@ -336,7 +289,6 @@ async function main() {
     console.log(`  ✓ ${liquidacionesData.length} liquidaciones creadas`);
     console.log(`  ✓ ${comprobantesCount} comprobantes creados`);
 
-    // Crear turnos
     console.log("\n📅 Creando turnos...");
     const turnosData = [
       { clienteIndex: 0, adminIndex: 0, fecha: new Date("2025-02-10"), hora: "10:00" },
@@ -373,8 +325,6 @@ async function main() {
     console.log(`   📊 Liquidaciones: ${liquidacionesData.length}`);
     console.log(`   📄 Comprobantes: ${comprobantesCount}`);
     console.log(`   📅 Turnos: ${turnosData.length}`);
-    console.log(`   👤 Admin principal (admin@example.com): ${clientesData.filter(c => c.adminIndex === 0).length} clientes`);
-    console.log(`\nYa podés iniciar sesión con cualquiera de estos usuarios.`);
   } catch (error) {
     console.error("❌ Error:", error);
     throw error;

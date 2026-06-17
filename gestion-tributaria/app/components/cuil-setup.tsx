@@ -47,8 +47,7 @@ export default function CuilSetup({ userName }: CuilSetupProps) {
         throw new Error(result.error);
       }
 
-      setStatus({ type: "success", message: "CUIL guardado correctamente. Recargue la página para continuar." });
-      router.refresh();
+      router.push("/dashboard");
     } catch (error: unknown) {
       setStatus({ type: "error", message: error instanceof Error ? error.message : "Error desconocido." });
     }

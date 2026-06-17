@@ -8,32 +8,23 @@ export default async function SubirPage() {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
-  const clerkUser = await db.clerk_user.findUnique({ where: { id: userId } });
-  if (!clerkUser?.cuil || !clerkUser?.rol) redirect("/dashboard");
-
-  const cuilNumber = BigInt(clerkUser.cuil.replace(/\D/g, ""));
-  const dbAdmin = await db.contador.findUnique({
-    where: { cuil: cuilNumber },
+  const contador = await db.contador.findFirst({
+    where: { clerk_id: userId },
     select: { cuil: true, id_estudio: true },
   });
-  if (!dbAdmin) redirect("/dashboard");
+  if (!contador) redirect("/dashboard");
 
   const [clientes, impuestos] = await Promise.all([
     db.cliente.findMany({
-      where: { id_estudio: dbAdmin.id_estudio },
-      select: {
-        cuil: true,
-        usuario: { select: { nombre_usuario: true, apellido_usuario: true } },
-      },
+      where: { id_estudio: contador.id_estudio },
+      select: { cuil: true, nombre: true, apellido: true },
     }),
     db.impuesto.findMany({ select: { id_impuesto: true, formato: true } }),
   ]);
 
-  const clientesData = (clientes as Array<{ cuil: bigint; usuario: { nombre_usuario: string | null; apellido_usuario: string | null } | null }>).map((c) => ({
+  const clientesData = clientes.map((c) => ({
     id: c.cuil.toString(),
-    nombre:
-      [c.usuario?.nombre_usuario, c.usuario?.apellido_usuario].filter(Boolean).join(" ") ||
-      `Cliente CUIL: ${c.cuil}`,
+    nombre: [c.nombre, c.apellido].filter(Boolean).join(" ") || `Cliente CUIL: ${c.cuil}`,
   }));
 
   return (

@@ -29,13 +29,11 @@ export async function actualizarContactoCliente(data: {
   if (!userId) return { error: "No autenticado." };
 
   try {
-    const clerkUser = await db.clerk_user.findUnique({ where: { id: userId } });
-    if (!clerkUser?.cuil) return { error: "CUIL no registrado." };
+    const cliente = await db.cliente.findFirst({ where: { clerk_id: userId } });
+    if (!cliente) return { error: "Usuario no encontrado." };
 
-    const cuilNumber = BigInt(clerkUser.cuil.replace(/\D/g, ""));
-
-    await db.usuario.update({
-      where: { CUIL_usuario: cuilNumber },
+    await db.cliente.update({
+      where: { cuil: cliente.cuil },
       data: { email: data.email, telefono: data.telefono },
     });
 

@@ -11,6 +11,7 @@ import {
   BarChart3,
   Calendar,
   Mail,
+  Building2,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -19,9 +20,10 @@ interface SidebarProps {
 }
 
 const adminNav = [
-  { href: "/dashboard", label: "Padrón de Clientes", icon: Users },
+  { href: "/dashboard/clientes", label: "Clientes", icon: Users },
   { href: "/dashboard/subir", label: "Subir Liquidación", icon: Upload },
   { href: "/dashboard/liquidaciones", label: "Listado Liquidaciones", icon: FileText },
+  { href: "/dashboard/entidades", label: "Entidades Tributarias", icon: Building2 },
   { href: "/dashboard/turnos", label: "Turnos", icon: Calendar },
 ];
 

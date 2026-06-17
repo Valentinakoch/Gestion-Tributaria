@@ -11,55 +11,40 @@ export default async function TurnosPage() {
 
   const user = await currentUser();
   const nombreUsuario = `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || "Usuario";
-
-  const clerkUser = await db.clerk_user.findUnique({ where: { id: userId } });
-  if (!clerkUser?.cuil || !clerkUser?.rol) redirect("/dashboard");
-
-  const cuilNumber = BigInt(clerkUser.cuil.replace(/\D/g, ""));
-  const dbAdmin = await db.contador.findUnique({ where: { cuil: cuilNumber } });
-
-  if (dbAdmin) {
+  
+  //es contador
+  const contador = await db.contador.findFirst({ where: { clerk_id: userId } });
+  if (contador) {
     const [turnos, admins] = await Promise.all([
       db.turno.findMany({
         include: {
-          cliente: {
-            include: { usuario: { select: { nombre_usuario: true, apellido_usuario: true } } },
-          },
-          contador: {
-            include: { usuario: { select: { nombre_usuario: true, apellido_usuario: true } } },
-          },
+          cliente: { select: { nombre: true, apellido: true } },
+          contador: { select: { nombre: true, apellido: true } },
         },
         orderBy: [{ fecha: "desc" }, { hora: "desc" }],
       }),
-      db.contador.findMany({
-        include: { usuario: { select: { nombre_usuario: true, apellido_usuario: true } } },
-      }),
+      db.contador.findMany({ select: { cuil: true, nombre: true, apellido: true } }),
     ]);
 
     const turnosData = turnos.map((t) => ({
       id: `${t.fecha.toISOString()}-${t.hora.toISOString()}-${t.cuil_cliente}-${t.cuil_contador}`,
-      cliente:
-        [t.cliente?.usuario?.nombre_usuario, t.cliente?.usuario?.apellido_usuario]
-          .filter(Boolean)
-          .join(" ") || `CUIL: ${t.cuil_cliente}`,
-      fecha: t.fecha.toLocaleDateString("es-AR"),
-      hora: t.hora.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }),
-      fechaIso: t.fecha.toISOString().slice(0, 10),
-      horaIso: t.hora.toISOString().slice(11, 16),
-      cuilCliente: t.cuil_cliente.toString(),
-      cuilAdmin: t.cuil_contador.toString(),
+      cliente: t.cuil_cliente
+        ? [t.cliente?.nombre, t.cliente?.apellido].filter(Boolean).join(" ") || `CUIL: ${t.cuil_cliente}`
+        : null, // null = turno disponible, sin cliente
+      fecha: `${String(t.fecha.getUTCDate()).padStart(2, "0")}/${String(t.fecha.getUTCMonth() + 1).padStart(2, "0")}/${t.fecha.getUTCFullYear()}`,
+      hora: `${String(t.hora.getUTCHours()).padStart(2, "0")}:${String(t.hora.getUTCMinutes()).padStart(2, "0")}`,
+      fechaIso: `${t.fecha.getUTCFullYear()}-${String(t.fecha.getUTCMonth() + 1).padStart(2, "0")}-${String(t.fecha.getUTCDate()).padStart(2, "0")}`,
+      horaIso: `${String(t.hora.getUTCHours()).padStart(2, "0")}:${String(t.hora.getUTCMinutes()).padStart(2, "0")}`,
+      cuilContador: t.cuil_contador.toString(),
       adminNombre:
-        [t.contador?.usuario?.nombre_usuario, t.contador?.usuario?.apellido_usuario]
-          .filter(Boolean)
-          .join(" ") || `Admin CUIL: ${t.cuil_contador}`,
+        [t.contador?.nombre, t.contador?.apellido].filter(Boolean).join(" ") ||
+        `Admin CUIL: ${t.cuil_contador}`,
+      reservado: t.cuil_cliente !== null, // true = tiene cliente, no se puede deshabilitar
     }));
 
     const adminsData = admins.map((a) => ({
       cuil: a.cuil.toString(),
-      nombre:
-        [a.usuario?.nombre_usuario, a.usuario?.apellido_usuario]
-          .filter(Boolean)
-          .join(" ") || `Admin CUIL: ${a.cuil}`,
+      nombre: [a.nombre, a.apellido].filter(Boolean).join(" ") || `Admin CUIL: ${a.cuil}`,
     }));
 
     return (
@@ -79,12 +64,13 @@ export default async function TurnosPage() {
     );
   }
 
+  const cliente = await db.cliente.findFirst({ where: { clerk_id: userId } });
+  if (!cliente) redirect("/dashboard");
+
   const turnosCliente = await db.turno.findMany({
-    where: { cuil_cliente: cuilNumber },
+    where: { cuil_cliente: cliente.cuil },
     include: {
-      contador: {
-        include: { usuario: { select: { nombre_usuario: true, apellido_usuario: true } } },
-      },
+      contador: { select: { nombre: true, apellido: true } },
     },
     orderBy: [{ fecha: "asc" }, { hora: "asc" }],
   });
@@ -94,9 +80,7 @@ export default async function TurnosPage() {
     fecha: t.fecha.toLocaleDateString("es-AR"),
     hora: t.hora.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }),
     adminNombre:
-      [t.contador?.usuario?.nombre_usuario, t.contador?.usuario?.apellido_usuario]
-        .filter(Boolean)
-        .join(" ") || `Admin`,
+      [t.contador?.nombre, t.contador?.apellido].filter(Boolean).join(" ") || "Admin",
   }));
 
   return (

@@ -25,7 +25,10 @@ const clerkHandler = clerkMiddleware(async (auth, request) => {
   }
 })
 
-export async function proxy(request: any, event: any) {
+export async function proxy(
+  request: Parameters<typeof clerkHandler>[0],
+  event: Parameters<typeof clerkHandler>[1],
+) {
   return clerkHandler(request, event)
 }
 

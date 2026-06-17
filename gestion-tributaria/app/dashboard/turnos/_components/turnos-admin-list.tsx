@@ -1,20 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { Calendar, Clock, User, Trash2, Settings, X, Search, ChevronLeft, ChevronRight } from "lucide-react";
-import { editarTurno, borrarTurno } from "../../../../lib/actions/turnos.actions";
+import { Calendar, Clock, User, Trash2, Settings, X, Search, ChevronLeft, ChevronRight, Plus, BanIcon } from "lucide-react";
+import { editarTurno, borrarTurno, crearTurno } from "../../../../lib/actions/turnos.actions";
 import CustomSelect from "@/components/custom-select";
 
 interface TurnoData {
   id: string;
-  cliente: string;
+  cliente: string | null;
   fecha: string;
   hora: string;
   fechaIso: string;
   horaIso: string;
-  cuilCliente: string;
-  cuilAdmin: string;
+  cuilContador: string;
   adminNombre: string;
+  reservado: boolean;
 }
 
 interface AdminOption {
@@ -26,6 +26,7 @@ interface Props {
   turnos: TurnoData[];
   admins: AdminOption[];
 }
+
 
 function formatDateInput(raw: string): string {
   const digits = raw.replace(/\D/g, "").slice(0, 8);
@@ -54,10 +55,17 @@ export default function TurnosAdminList({ turnos, admins }: Props) {
   const [editAdmin, setEditAdmin] = useState("");
   const [mensaje, setMensaje] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
   const [cargando, setCargando] = useState(false);
+  // — Estados modal crear —
+  const [creando, setCreando] = useState(false);
+  const [nuevaFecha, setNuevaFecha] = useState("");
+  const [nuevaHora, setNuevaHora] = useState("");
+  const [nuevoAdmin, setNuevoAdmin] = useState(admins[0]?.cuil ?? "");
+
 
   const adminOptions = admins.map((a) => ({ value: a.cuil, label: a.nombre }));
   const [search, setSearch] = useState("");
   const [filtroAdmin, setFiltroAdmin] = useState<string>("todos");
+  const [filtroEstado, setFiltroEstado] = useState<string>("todos");
   const [page, setPage] = useState(1);
 
   const adminNombresUnicos = [...new Set(turnos.map((t) => t.adminNombre))].sort();
@@ -65,15 +73,24 @@ export default function TurnosAdminList({ turnos, admins }: Props) {
     { value: "todos", label: "Todos los admins" },
     ...adminNombresUnicos.map((n) => ({ value: n, label: n })),
   ];
+    const opcionesFiltroEstado = [
+    { value: "todos", label: "Todos los turnos" },
+    { value: "disponible", label: "Disponibles" },
+    { value: "reservado", label: "Reservados" },
+  ];
 
   const filtered = turnos.filter((t) => {
     const matchesSearch =
-      t.cliente.toLowerCase().includes(search.toLowerCase()) ||
+      (t.cliente && t.cliente.toLowerCase().includes(search.toLowerCase())) ||
       t.adminNombre.toLowerCase().includes(search.toLowerCase()) ||
       t.fecha.includes(search) ||
       t.hora.includes(search);
     const matchesAdmin = filtroAdmin === "todos" || t.adminNombre === filtroAdmin;
-    return matchesSearch && matchesAdmin;
+     const matchesEstado =
+      filtroEstado === "todos" ||
+      (filtroEstado === "disponible" && !t.reservado) ||
+      (filtroEstado === "reservado" && t.reservado);
+    return matchesSearch && matchesAdmin && matchesEstado;
   });
 
   const PAGE_SIZE = 5;
@@ -100,20 +117,22 @@ export default function TurnosAdminList({ turnos, admins }: Props) {
     return pages;
   }
 
-  function abrirModal(t: TurnoData) {
+  function abrirModalEditar(t: TurnoData) {
     const [_, m, d] = t.fechaIso.split("-").map(Number);
     setEditFecha(`${d.toString().padStart(2, "0")}/${m.toString().padStart(2, "0")}/${t.fechaIso.slice(0, 4)}`);
     setEditHora(t.horaIso);
-    setEditAdmin(t.cuilAdmin);
+    setEditAdmin(t.cuilContador);
     setEditando(t);
+    setMensaje(null);
+    
   }
 
-  function cerrarModal() {
+  function cerrarModalEditar() {
     setEditando(null);
     setMensaje(null);
   }
 
-  async function handleGuardar(e: React.FormEvent) {
+  async function handleGuardar(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!editando) return;
     setCargando(true);
@@ -134,59 +153,103 @@ export default function TurnosAdminList({ turnos, admins }: Props) {
       return;
     }
 
-    const nuevaFechaIso = `${dateMatch[3]}-${dateMatch[2]}-${dateMatch[1]}`;
 
-    const res = await editarTurno({
-      cuilCliente: editando.cuilCliente,
-      cuilAdminActual: editando.cuilAdmin,
+     const res = await editarTurno({
       fechaActual: editando.fechaIso,
       horaActual: editando.horaIso,
-      nuevaFecha: nuevaFechaIso,
+      cuilContadorActual: editando.cuilContador,
+      nuevaFecha: `${dateMatch[3]}-${dateMatch[2]}-${dateMatch[1]}`,
       nuevaHora: editHora,
-      nuevoCuilAdmin: editAdmin,
+      nuevoCuilContador: editAdmin,
     });
 
     if (res.success) {
-      cerrarModal();
+      cerrarModalEditar();
     } else {
       setMensaje({ tipo: "error", texto: res.error || "Error al editar." });
     }
     setCargando(false);
   }
 
+  // — Handler deshabilitar/cancelar —
   async function handleBorrar(t: TurnoData) {
-    if (!confirm(`¿Eliminar el turno de ${t.cliente} el ${t.fecha} a las ${t.hora}?`)) return;
+    const confirmMsg = t.reservado
+      ? `¿Cancelar el turno de ${t.cliente} el ${t.fecha} a las ${t.hora}?`
+      : `¿Deshabilitar el turno del ${t.fecha} a las ${t.hora}?`;
+
+    if (!confirm(confirmMsg)) return;
     setMensaje(null);
 
     const res = await borrarTurno({
-      cuilCliente: t.cuilCliente,
-      cuilAdmin: t.cuilAdmin,
       fecha: t.fechaIso,
       hora: t.horaIso,
+      cuilContador: t.cuilContador,
     });
-
-    if (res.success) {
-      setMensaje({ tipo: "ok", texto: "Turno eliminado." });
+   if (res.success) {
+      setMensaje({
+        tipo: "ok",
+        texto: t.reservado ? "Turno cancelado." : "Turno deshabilitado.",
+      });
     } else {
-      setMensaje({ tipo: "error", texto: res.error || "Error al borrar." });
+      setMensaje({ tipo: "error", texto: res.error || "Error al eliminar el turno." });
     }
   }
+   // — Handlers modal crear —
+  function abrirModalCrear() {
+    setNuevaFecha("");
+    setNuevaHora("");
+    setNuevoAdmin(admins[0]?.cuil ?? "");
+    setCreando(true);
+    setMensaje(null);
+  }
 
+  function cerrarModalCrear() {
+    setCreando(false);
+    setMensaje(null);
+  }
+
+  async function handleCrear(e: React.SubmitEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setCargando(true);
+    setMensaje(null);
+    const dateMatch = nuevaFecha.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!dateMatch) {
+      setMensaje({ tipo: "error", texto: "Fecha inválida. Usá dd/mm/aaaa." });
+      setCargando(false);
+      return;
+    }
+    if (!/^(\d{2}):(\d{2})$/.test(nuevaHora)) {
+      setMensaje({ tipo: "error", texto: "Hora inválida. Usá hh:mm." });
+      setCargando(false);
+      return;
+    }
+
+    const res = await crearTurno({
+      fecha: `${dateMatch[3]}-${dateMatch[2]}-${dateMatch[1]}`,
+      hora: nuevaHora,
+      cuilContador: nuevoAdmin,
+    });
+    if (res.success) {
+      cerrarModalCrear();
+    } else {
+      setMensaje({ tipo: "error", texto: res.error || "Error al crear el turno." });
+    }
+    setCargando(false);
+  }
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-      {mensaje && (
-        <div
-          className={`mx-6 mt-4 flex items-center gap-2 p-3 rounded-xl text-sm font-medium ${
-            mensaje.tipo === "ok" ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"
-          }`}
-        >
+     <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
+      {mensaje && !editando && !creando && (
+        <div className={`mx-6 mt-4 flex items-center gap-2 p-3 rounded-xl text-sm font-medium ${
+          mensaje.tipo === "ok" ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"
+        }`}>
           {mensaje.texto}
         </div>
       )}
 
+      {/* Barra de filtros + botón crear */}
       <div className="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
-        <div className="flex items-center gap-3 flex-1">
-          <div className="relative flex-1 max-w-xs">
+        <div className="flex items-center gap-3 flex-1 flex-wrap">
+          <div className="relative flex-1 min-w-[160px] max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
@@ -200,12 +263,28 @@ export default function TurnosAdminList({ turnos, admins }: Props) {
             options={opcionesFiltroAdmin}
             value={filtroAdmin}
             onChange={(v) => { setFiltroAdmin(v); setPage(1); }}
-            className="min-w-[160px]"
+            className="min-w-[170px]"
+          />
+          <CustomSelect
+            options={opcionesFiltroEstado}
+            value={filtroEstado}
+            onChange={(v) => { setFiltroEstado(v); setPage(1); }}
+            className="min-w-[150px]"
           />
         </div>
-        <span className="text-xs text-slate-400 shrink-0">{filtered.length} de {turnos.length} registros</span>
+        <div className="flex items-center gap-3 shrink-0">
+          <span className="text-xs text-slate-400">{filtered.length} de {turnos.length} registros</span>
+          <button
+            onClick={abrirModalCrear}
+            className="flex items-center gap-1.5 text-xs font-semibold text-white bg-brand-dark hover:brightness-110 px-3 py-2 rounded-xl transition-all"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Habilitar turno
+          </button>
+        </div>
       </div>
 
+      {/* Lista */}
       {filtered.length === 0 ? (
         <div className="p-12 text-center">
           <Calendar className="h-10 w-10 text-slate-300 mx-auto mb-3" />
@@ -214,45 +293,57 @@ export default function TurnosAdminList({ turnos, admins }: Props) {
       ) : (
         <div className="divide-y divide-slate-100">
           {paginated.map((t) => (
-            <div
-              key={t.id}
-              className="px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
-            >
+            <div key={t.id} className="px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
               <div className="flex items-center gap-4">
-                <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
-                  <User className="h-5 w-5 text-slate-500" />
+                <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${
+                  t.reservado ? "bg-blue-50" : "bg-slate-100"
+                }`}>
+                  <User className={`h-5 w-5 ${t.reservado ? "text-blue-500" : "text-slate-400"}`} />
                 </div>
                 <div>
-                  <h4 className="font-medium text-slate-800">{t.cliente}</h4>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-medium text-slate-800">
+                      {t.cliente ?? "Disponible"}
+                    </h4>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      t.reservado
+                        ? "bg-blue-50 text-blue-700"
+                        : "bg-emerald-50 text-emerald-700"
+                    }`}>
+                      {t.reservado ? "Reservado" : "Disponible"}
+                    </span>
+                  </div>
                   <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
                     <span className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {t.fecha}
+                      <Calendar className="h-3 w-3" />{t.fecha}
                     </span>
                     <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {t.hora}
+                      <Clock className="h-3 w-3" />{t.hora}
                     </span>
                     <span className="flex items-center gap-1">
-                      <User className="h-3 w-3" />
-                      {t.adminNombre}
+                      <User className="h-3 w-3" />{t.adminNombre}
                     </span>
                   </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => abrirModal(t)}
+                  onClick={() => abrirModalEditar(t)}
                   className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 transition-colors"
                 >
                   <Settings className="h-3 w-3" />
-                  Gestionar
+                  Modificar
                 </button>
                 <button
                   onClick={() => handleBorrar(t)}
-                  className="flex items-center gap-1 text-xs font-semibold text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 transition-colors"
+                  className={`flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
+                    t.reservado
+                      ? "text-orange-600 hover:bg-orange-50 border-orange-100"
+                      : "text-red-600 hover:bg-red-50 border-red-100"
+                  }`}
                 >
-                  <Trash2 className="h-3 w-3" />
+                  {t.reservado ? <BanIcon className="h-3 w-3" /> : <Trash2 className="h-3 w-3" />}
+                  {t.reservado ? "Cancelar" : "Deshabilitar"}
                 </button>
               </div>
             </div>
@@ -260,6 +351,7 @@ export default function TurnosAdminList({ turnos, admins }: Props) {
         </div>
       )}
 
+      {/* Paginación */}
       {totalPages > 1 && (
         <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-sm rounded-b-2xl">
           <button
@@ -270,7 +362,6 @@ export default function TurnosAdminList({ turnos, admins }: Props) {
             <ChevronLeft className="h-4 w-4" />
             Anterior
           </button>
-
           <div className="flex items-center gap-1">
             {getPageNumbers().map((p, i) =>
               p === "..." ? (
@@ -290,7 +381,6 @@ export default function TurnosAdminList({ turnos, admins }: Props) {
               )
             )}
           </div>
-
           <button
             onClick={() => goTo(page + 1)}
             disabled={page === totalPages}
@@ -302,25 +392,25 @@ export default function TurnosAdminList({ turnos, admins }: Props) {
         </div>
       )}
 
+      {/* Modal editar */}
       {editando && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-900">Gestionar Turno</h3>
-              <button onClick={cerrarModal} className="text-slate-400 hover:text-slate-600 transition-colors">
+              <h3 className="text-lg font-semibold text-slate-900">Modificar Turno</h3>
+              <button onClick={cerrarModalEditar} className="text-slate-400 hover:text-slate-600 transition-colors">
                 <X className="h-5 w-5" />
               </button>
             </div>
-
-            <div className="text-sm text-slate-500">
-              Cliente: <span className="font-medium text-slate-700">{editando.cliente}</span>
-            </div>
-
+            {editando.cliente && (
+              <div className="text-sm text-slate-500">
+                Cliente: <span className="font-medium text-slate-700">{editando.cliente}</span>
+              </div>
+            )}
             <form onSubmit={handleGuardar} className="space-y-4">
               <div>
                 <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1">
-                  <Calendar className="h-4 w-4 text-slate-400" />
-                  Fecha
+                  <Calendar className="h-4 w-4 text-slate-400" />Fecha
                 </label>
                 <input
                   type="text"
@@ -332,11 +422,9 @@ export default function TurnosAdminList({ turnos, admins }: Props) {
                   className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
                 />
               </div>
-
               <div>
                 <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1">
-                  <Clock className="h-4 w-4 text-slate-400" />
-                  Hora
+                  <Clock className="h-4 w-4 text-slate-400" />Hora
                 </label>
                 <input
                   type="text"
@@ -348,43 +436,94 @@ export default function TurnosAdminList({ turnos, admins }: Props) {
                   className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
                 />
               </div>
-
               <div>
                 <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1">
-                  <User className="h-4 w-4 text-slate-400" />
-                  Administrador
+                  <User className="h-4 w-4 text-slate-400" />Contador
                 </label>
-                <CustomSelect
-                  options={adminOptions}
-                  value={editAdmin}
-                  onChange={(v) => setEditAdmin(v)}
-                />
+                <CustomSelect options={adminOptions} value={editAdmin} onChange={setEditAdmin} />
               </div>
-
               {mensaje && (
-                <div
-                  className={`p-3 rounded-xl text-sm font-medium ${
-                    mensaje.tipo === "ok" ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"
-                  }`}
-                >
+                <div className={`p-3 rounded-xl text-sm font-medium ${
+                  mensaje.tipo === "ok" ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"
+                }`}>
                   {mensaje.texto}
                 </div>
               )}
-
               <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={cerrarModal}
-                  className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
-                >
+                <button type="button" onClick={cerrarModalEditar}
+                  className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
                   Cancelar
                 </button>
-                <button
-                  type="submit"
-                  disabled={cargando}
-                  className="flex-1 px-4 py-2.5 bg-brand-dark text-white rounded-xl text-sm font-semibold hover:brightness-110 transition-all disabled:opacity-50"
-                >
+                <button type="submit" disabled={cargando}
+                  className="flex-1 px-4 py-2.5 bg-brand-dark text-white rounded-xl text-sm font-semibold hover:brightness-110 transition-all disabled:opacity-50">
                   {cargando ? "Guardando..." : "Guardar cambios"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal crear */}
+      {creando && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-slate-900">Habilitar Turno</h3>
+              <button onClick={cerrarModalCrear} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={handleCrear} className="space-y-4">
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1">
+                  <Calendar className="h-4 w-4 text-slate-400" />Fecha
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={nuevaFecha}
+                  onChange={(e) => setNuevaFecha(formatDateInput(e.target.value))}
+                  placeholder="dd/mm/aaaa"
+                  maxLength={10}
+                  className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1">
+                  <Clock className="h-4 w-4 text-slate-400" />Hora
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={nuevaHora}
+                  onChange={(e) => setNuevaHora(formatTimeInput(e.target.value))}
+                  placeholder="hh:mm"
+                  maxLength={5}
+                  className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1">
+                  <User className="h-4 w-4 text-slate-400" />Contador
+                </label>
+                <CustomSelect options={adminOptions} value={nuevoAdmin} onChange={setNuevoAdmin} />
+              </div>
+              {mensaje && (
+                <div className={`p-3 rounded-xl text-sm font-medium ${
+                  mensaje.tipo === "ok" ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"
+                }`}>
+                  {mensaje.texto}
+                </div>
+              )}
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={cerrarModalCrear}
+                  className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                  Cancelar
+                </button>
+                <button type="submit" disabled={cargando}
+                  className="flex-1 px-4 py-2.5 bg-brand-dark text-white rounded-xl text-sm font-semibold hover:brightness-110 transition-all disabled:opacity-50">
+                  {cargando ? "Creando..." : "Habilitar turno"}
                 </button>
               </div>
             </form>
