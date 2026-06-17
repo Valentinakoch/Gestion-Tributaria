@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "../prisma";
 import { revalidatePath } from "next/cache";
 import { verificarRol } from "./auth.actions";
+import { enviarEmailTurno } from "../email";
 
 //crear nuevo turno disponible (admin)
 export async function crearTurno(data: {
@@ -161,8 +162,20 @@ export async function cancelarTurno(data: {
     if (!turno) return { error: "Turno no encontrado." };
     if (!turno.cliente) return { error: "Este turno no tiene un cliente reservado." };
 
-    // pendiente: enviar mail de notificación al cliente (turno.cliente.email)
+    // ENVÍO DE EMAIL AL CLIENTE
+    if (turno.cliente.email) {
+      const nombreCliente = [turno.cliente.nombre, turno.cliente.apellido]
+        .filter(Boolean)
+        .join(" ") || `Cliente (CUIL ${turno.cliente.cuil})`;
 
+      await enviarEmailTurno({
+        destinatarioEmail: turno.cliente.email,
+        destinatarioNombre: nombreCliente,
+        fecha: data.fecha,
+        hora: data.hora,
+        motivo: "El estudio contable ha cancelado este turno.",
+      });
+    }
 
     await db.turno.delete({
       where: {
@@ -202,8 +215,26 @@ export async function cancelarTurno(data: {
         hora: horaDate,
         cuil_cliente: null,
       },
+      include: { contador: true },
     });
     if (!turno) return { error: "El turno no está disponible." };
+    
+    //notificar al contador que se reservó el turno
+    if (turno.contador && turno.contador.email) {
+      const nombreCliente = [cliente.nombre, cliente.apellido]
+        .filter(Boolean)
+        .join(" ") || `CUIL: ${cliente.cuil}`;
+        
+      const nombreContador = turno.contador.nombre || "Contador";
+
+      await enviarEmailTurno({
+        destinatarioEmail: turno.contador.email,
+        destinatarioNombre: nombreContador,
+        fecha: data.fecha,
+        hora: data.hora,
+        motivo: `El cliente ${nombreCliente} ha RESERVADO este turno. Ya quedó agendado en el sistema.`,
+      });
+    }
 
     await db.turno.update({
       where: {
@@ -246,10 +277,26 @@ export async function cancelarTurnoCliente(data: {
         cuil_contador: BigInt(data.cuilContador),
         cuil_cliente: cliente.cuil, // solo puede cancelar SU turno
       },
+      include: { contador: true }, // Traemos la info del contador asignado
     });
     if (!turno) return { error: "Turno no encontrado o no te pertenece." };
 
-    // pendiente notificar al contador (turno cancelado) 
+    // ENVÍO DE EMAIL AL CONTADOR
+    if (turno.contador && turno.contador.email) {
+      const nombreCliente = [cliente.nombre, cliente.apellido]
+        .filter(Boolean)
+        .join(" ") || `CUIL: ${cliente.cuil}`;
+        
+      const nombreContador = turno.contador.nombre || "Contador";
+
+      await enviarEmailTurno({
+        destinatarioEmail: turno.contador.email,
+        destinatarioNombre: nombreContador,
+        fecha: data.fecha,
+        hora: data.hora,
+        motivo: `El cliente ${nombreCliente} ha cancelado la reserva de este turno. El horario vuelve a estar disponible.`,
+      });
+    }
 
     await db.turno.update({
       where: {
@@ -266,6 +313,43 @@ export async function cancelarTurnoCliente(data: {
     return { success: true };
   } catch {
     return { error: "Error al cancelar el turno." };
+  }
+}
+
+//limpia turnos vencidos (fecha+hora ya pasada), reservados o no
+export async function limpiarTurnosVencidos() {
+  try {
+    const ahora = new Date();
+
+    // Traemos todos los turnos para comparar fecha+hora combinadas
+    // (Prisma no puede comparar fecha+hora por separado en un solo where)
+    const turnos = await db.turno.findMany({
+      select: { fecha: true, hora: true, cuil_contador: true },
+    });
+
+    const vencidos = turnos.filter((t) => {
+      const fechaHora = new Date(t.fecha);
+      fechaHora.setUTCHours(t.hora.getUTCHours(), t.hora.getUTCMinutes(), 0, 0);
+      return fechaHora < ahora;
+    });
+
+    if (vencidos.length === 0) return;
+
+    await db.$transaction(
+      vencidos.map((t) =>
+        db.turno.delete({
+          where: {
+            fecha_hora_cuil_contador: {
+              fecha: t.fecha,
+              hora: t.hora,
+              cuil_contador: t.cuil_contador,
+            },
+          },
+        })
+      )
+    );
+  } catch {
+    
   }
 }
 

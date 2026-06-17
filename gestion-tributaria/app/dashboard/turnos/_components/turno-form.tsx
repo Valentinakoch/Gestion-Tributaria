@@ -32,7 +32,8 @@ const PAGE_SIZE = 5;
 export default function TurnoForm({ turnosDisponibles, misTurnos, contadores }: Props) {
   const [contadorElegido, setContadorElegido] = useState<string>("todos");
   const [turnoAReservar, setTurnoAReservar] = useState<Turno | null>(null);
-  
+  const [confirmandoCancelar, setConfirmandoCancelar] = useState<Turno | null>(null);
+
   const [mensaje, setMensaje] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
   const [cargando, setCargando] = useState(false)
   
@@ -107,23 +108,28 @@ export default function TurnoForm({ turnosDisponibles, misTurnos, contadores }: 
   }
 
    // Cancelar mi turno 
-  async function handleCancelar(t: Turno) {
-    if (!confirm(`¿Cancelar tu turno del ${t.fecha} a las ${t.hora}?`)) return;
-    setMensaje(null);
+      function pedirConfirmacionCancelar(t: Turno) {
+      setConfirmandoCancelar(t);
+      }
 
-    const res = await cancelarTurnoCliente({
-      fecha: t.fechaIso,
-      hora: t.horaIso,
-      cuilContador: t.cuilContador,
-    });
-
-    if (res.success) {
-      setMensaje({ tipo: "ok", texto: "Turno cancelado." });
-    } else {
-      setMensaje({ tipo: "error", texto: res.error || "Error al cancelar el turno." });
+    async function ejecutarCancelar(t: Turno) {
+      setMensaje(null);
+      const res = await cancelarTurnoCliente({
+        fecha: t.fechaIso,
+        hora: t.horaIso,
+        cuilContador: t.cuilContador,
+      });
+      if (res.success) {
+        setMensaje({ tipo: "ok", texto: "Turno cancelado." });
+      } else {
+        setMensaje({ tipo: "error", texto: res.error || "Error al cancelar el turno." });
+      }
     }
-  }
-
+    function confirmarCancelacion() {
+      if (!confirmandoCancelar) return;
+      ejecutarCancelar(confirmandoCancelar);
+      setConfirmandoCancelar(null);
+    }
 
   return (
      <div className="space-y-6">
@@ -159,13 +165,12 @@ export default function TurnoForm({ turnosDisponibles, misTurnos, contadores }: 
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleCancelar(t)}
-                  className="flex items-center gap-1 text-xs font-semibold text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 transition-colors"
-                >
-                  <X className="h-3 w-3" />
-                  Cancelar
-                </button>
+               
+              <button  onClick={() => pedirConfirmacionCancelar(t)}
+                   className="flex items-center gap-1 text-xs font-semibold text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 transition-colors" >
+              <X className="h-3 w-3" />
+              Cancelar
+            </button>
               </div>
             ))}
           </div>
@@ -332,6 +337,31 @@ export default function TurnoForm({ turnosDisponibles, misTurnos, contadores }: 
           </div>
         </div>
       )}
+      {/* Modal confirmación cancelar */}
+      {confirmandoCancelar && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 space-y-4">
+        <h3 className="text-lg font-semibold text-slate-900">Cancelar turno</h3>
+        <p className="text-sm text-slate-600">
+          ¿Cancelar tu turno del {confirmandoCancelar.fecha} a las {confirmandoCancelar.hora}?
+        </p>
+        <div className="flex gap-3 pt-2">
+          <button
+            onClick={() => setConfirmandoCancelar(null)}
+            className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            Volver
+          </button>
+          <button
+            onClick={confirmarCancelacion}
+            className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 transition-all"
+          >
+            Sí, cancelar
+          </button>
+        </div>
+      </div>
     </div>
+      )}
+      </div>
   )
 }

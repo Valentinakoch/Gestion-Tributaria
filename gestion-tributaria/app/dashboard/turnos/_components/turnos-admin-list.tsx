@@ -55,12 +55,17 @@ export default function TurnosAdminList({ turnos, admins }: Props) {
   const [editAdmin, setEditAdmin] = useState("");
   const [mensaje, setMensaje] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
   const [cargando, setCargando] = useState(false);
+
   // — Estados modal crear —
   const [creando, setCreando] = useState(false);
   const [nuevaFecha, setNuevaFecha] = useState("");
   const [nuevaHora, setNuevaHora] = useState("");
   const [nuevoAdmin, setNuevoAdmin] = useState(admins[0]?.cuil ?? "");
 
+  const [confirmando, setConfirmando] = useState<{
+  turno: TurnoData;
+  accion: "borrar" | "cancelar";
+  } | null>(null);
 
   const adminOptions = admins.map((a) => ({ value: a.cuil, label: a.nombre }));
   const [search, setSearch] = useState("");
@@ -172,46 +177,51 @@ export default function TurnosAdminList({ turnos, admins }: Props) {
   }
 
   // — Handler deshabilitar —
-  async function handleBorrar(t: TurnoData) {
-    const confirmMsg = t.reservado
-      ? `¿Cancelar el turno de ${t.cliente} el ${t.fecha} a las ${t.hora}?`
-      : `¿Deshabilitar el turno del ${t.fecha} a las ${t.hora}?`;
+  function pedirConfirmacionBorrar(t: TurnoData) {
+  setConfirmando({ turno: t, accion: "borrar" });
+}
 
-    if (!confirm(confirmMsg)) return;
-    setMensaje(null);
-
-    const res = await borrarTurno({
-      fecha: t.fechaIso,
-      hora: t.horaIso,
-      cuilContador: t.cuilContador,
-    });
-   if (res.success) {
-      setMensaje({
-        tipo: "ok",
-        texto: t.reservado ? "Turno cancelado." : "Turno deshabilitado.",
-      });
-    } else {
-      setMensaje({ tipo: "error", texto: res.error || "Error al eliminar el turno." });
-    }
-  }
-
-  // — Handler cancelar —
-  async function handleCancelar(t: TurnoData) {
-  if (!confirm(`¿Cancelar el turno de ${t.cliente} el ${t.fecha} a las ${t.hora}? Se notificará al cliente por mail.`)) return;
+async function ejecutarBorrar(t: TurnoData) {
   setMensaje(null);
+  const res = await borrarTurno({
+    fecha: t.fechaIso,
+    hora: t.horaIso,
+    cuilContador: t.cuilContador,
+  });
+  if (res.success) {
+    setMensaje({ tipo: "ok", texto: t.reservado ? "Turno cancelado." : "Turno deshabilitado." });
+  } else {
+    setMensaje({ tipo: "error", texto: res.error || "Error al eliminar el turno." });
+  }
+}
 
+
+  //  Handler cancelar 
+function pedirConfirmacionCancelar(t: TurnoData) {
+  setConfirmando({ turno: t, accion: "cancelar" });
+}
+
+async function ejecutarCancelar(t: TurnoData) {
+  setMensaje(null);
   const res = await cancelarTurno({
     fecha: t.fechaIso,
     hora: t.horaIso,
     cuilContador: t.cuilContador,
   });
-
   if (res.success) {
     setMensaje({ tipo: "ok", texto: "Turno cancelado y cliente notificado." });
   } else {
     setMensaje({ tipo: "error", texto: res.error || "Error al cancelar el turno." });
   }
 }
+
+function confirmarAccion() {
+  if (!confirmando) return;
+  if (confirmando.accion === "borrar") ejecutarBorrar(confirmando.turno);
+  else ejecutarCancelar(confirmando.turno);
+  setConfirmando(null);
+}
+
    // — Handlers modal crear —
   function abrirModalCrear() {
     setNuevaFecha("");
@@ -359,7 +369,7 @@ export default function TurnosAdminList({ turnos, admins }: Props) {
 
     {/* Deshabilitar (disponible) o Cancelar (reservado) */}
     <button
-      onClick={() => (t.reservado ? handleCancelar(t) : handleBorrar(t))}
+       onClick={() => (t.reservado ? pedirConfirmacionCancelar(t) : pedirConfirmacionBorrar(t))}
       className={`flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
         t.reservado
           ? "text-orange-600 hover:bg-orange-50 border-orange-100"
@@ -555,6 +565,38 @@ export default function TurnosAdminList({ turnos, admins }: Props) {
           </div>
         </div>
       )}
+      
+      {/* Modal confirmación */}
+    {confirmando && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 space-y-4">
+          <h3 className="text-lg font-semibold text-slate-900">
+            {confirmando.accion === "cancelar" ? "Cancelar turno" : "Deshabilitar turno"}
+          </h3>
+          <p className="text-sm text-slate-600">
+            {confirmando.accion === "cancelar"
+              ? `¿Cancelar el turno de ${confirmando.turno.cliente} el ${confirmando.turno.fecha} a las ${confirmando.turno.hora}? Se notificará al cliente por mail.`
+              : `¿Deshabilitar el turno del ${confirmando.turno.fecha} a las ${confirmando.turno.hora}?`}
+          </p>
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={() => setConfirmando(null)}
+              className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={confirmarAccion}
+              className="flex-1 px-4 py-2.5 bg-brand-dark text-white rounded-xl text-sm font-semibold hover:brightness-110 transition-all"
+            >
+              Confirmar
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
     </div>
+    
   );
 }
