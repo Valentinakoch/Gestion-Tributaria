@@ -22,7 +22,7 @@ interface SidebarProps {
 const adminNav = [
   { href: "/dashboard/clientes", label: "Clientes", icon: Users },
   { href: "/dashboard/subir", label: "Subir Liquidación", icon: Upload },
-  { href: "/dashboard/liquidaciones/(admin)", label: "Listado Liquidaciones", icon: FileText },
+  { href: "/dashboard/liquidaciones/admin", label: "Listado Liquidaciones", icon: FileText },
   { href: "/dashboard/entidades", label: "Entidades Tributarias", icon: Building2 },
   { href: "/dashboard/turnos", label: "Turnos", icon: Calendar },
 ];
