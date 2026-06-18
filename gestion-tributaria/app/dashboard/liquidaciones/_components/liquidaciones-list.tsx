@@ -169,7 +169,7 @@ export default function LiquidacionesList({ liquidaciones }: Props) {
                     </td>
                     <td className="px-6 py-3.5">
                       <Link
-                        href={`/dashboard/liquidaciones/${l.numeroBoleta}`}
+                        href={`/dashboard/liquidaciones/admin/${l.numeroBoleta}`}
                         className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 transition-colors"
                       >
                         <Eye className="h-3 w-3" />
