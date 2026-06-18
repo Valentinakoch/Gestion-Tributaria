@@ -18,16 +18,12 @@ export default async function LiquidacionDetailPage({ params }: { params: Promis
   const liquidacion = await db.liquidacion.findUnique({
     where: { numero_boleta: id },
     include: {
-      cliente: {
+      cliente: true,
+      impuesto: {
         include: {
-          inscripto_en: {
-            include: {
-              entidad_tributaria: true,
-            },
-          },
+          entidad_tributaria: true,
         },
       },
-      impuesto: true,
       comprobante: true,
     },
   });
@@ -37,10 +33,7 @@ export default async function LiquidacionDetailPage({ params }: { params: Promis
   const isPagado = liquidacion.estado?.toUpperCase() === "PAGADO";
 
   // 2. Extraemos la URL de pago de la entidad tributaria que coincida con el impuesto de esta liquidación
-  const inscripcionCorrecta = liquidacion.cliente?.inscripto_en.find(
-    (ins) => ins.id_entidad === liquidacion.id_impuesto
-  );
-  const urlPago = inscripcionCorrecta?.entidad_tributaria.url;
+  const urlPago = liquidacion.impuesto?.entidad_tributaria?.url;
 
   // Check if the user is an admin (contador) or the client of this liquidation
   const isAdmin = await db.contador.findFirst({ where: { clerk_id: userId } });
