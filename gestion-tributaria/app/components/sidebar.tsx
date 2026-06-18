@@ -12,6 +12,7 @@ import {
   Calendar,
   Mail,
   Building2,
+  Receipt,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -24,6 +25,7 @@ const adminNav = [
   { href: "/dashboard/subir", label: "Subir Liquidación", icon: Upload },
   { href: "/dashboard/liquidaciones/(admin)", label: "Listado Liquidaciones", icon: FileText },
   { href: "/dashboard/entidades", label: "Entidades Tributarias", icon: Building2 },
+  { href: "/dashboard/impuestos", label: "Impuestos", icon: Receipt },
   { href: "/dashboard/turnos", label: "Turnos", icon: Calendar },
 ];
 

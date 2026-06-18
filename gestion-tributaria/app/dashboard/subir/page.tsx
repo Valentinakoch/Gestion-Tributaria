@@ -19,7 +19,14 @@ export default async function SubirPage() {
       where: { id_estudio: contador.id_estudio },
       select: { cuil: true, nombre: true, apellido: true },
     }),
-    db.impuesto.findMany({ select: { id_impuesto: true, formato: true } }),
+    db.impuesto.findMany({
+      select: {
+        id_impuesto: true,
+        formato: true,
+        entidad_tributaria: { select: { nombre: true } },
+      },
+      orderBy: { formato: "asc" },
+    }),
   ]);
 
   const clientesData = clientes.map((c) => ({

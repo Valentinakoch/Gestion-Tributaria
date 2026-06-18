@@ -200,15 +200,19 @@ async function main() {
     console.log("\n💰 Creando impuestos...");
     const impuestosMap: Record<string, number> = {};
     const impuestosData = [
-      { formato: "IVA" },
-      { formato: "Ganancias" },
-      { formato: "Ingresos Brutos" },
-      { formato: "Bienes Personales" },
-      { formato: "Monotributo" },
+      { formato: "IVA", entidad: "AFIP" },
+      { formato: "Ganancias", entidad: "AFIP" },
+      { formato: "Ingresos Brutos ARBA", entidad: "ARBA" },
+      { formato: "Ingresos Brutos AGIP", entidad: "AGIP" },
+      { formato: "Bienes Personales", entidad: "AFIP" },
+      { formato: "Monotributo", entidad: "AFIP" },
     ];
     for (const impuesto of impuestosData) {
       const created = await prisma.impuesto.create({
-        data: { formato: impuesto.formato },
+        data: {
+          formato: impuesto.formato,
+          id_entidad: entidadesMap[impuesto.entidad],
+        },
       });
       impuestosMap[impuesto.formato] = created.id_impuesto;
       console.log(`  ✓ ${impuesto.formato}`);
@@ -247,13 +251,13 @@ async function main() {
       { clienteIndex: 0, impuesto: "IVA", mes: 0, importe: 15000.50, estado: "PAGADO" },
       { clienteIndex: 0, impuesto: "Ganancias", mes: 1, importe: 22300.00, estado: "PENDIENTE" },
       { clienteIndex: 1, impuesto: "IVA", mes: 2, importe: 18750.75, estado: "PAGADO" },
-      { clienteIndex: 1, impuesto: "Ingresos Brutos", mes: 3, importe: 31200.00, estado: "PENDIENTE" },
+      { clienteIndex: 1, impuesto: "Ingresos Brutos AGIP", mes: 3, importe: 31200.00, estado: "PENDIENTE" },
       { clienteIndex: 2, impuesto: "IVA", mes: 4, importe: 9800.25, estado: "PAGADO" },
       { clienteIndex: 2, impuesto: "Bienes Personales", mes: 5, importe: 45000.00, estado: "PENDIENTE" },
       { clienteIndex: 3, impuesto: "Ganancias", mes: 6, importe: 12450.00, estado: "PAGADO" },
       { clienteIndex: 3, impuesto: "Monotributo", mes: 7, importe: 27600.00, estado: "PENDIENTE" },
       { clienteIndex: 4, impuesto: "IVA", mes: 8, importe: 19200.50, estado: "PAGADO" },
-      { clienteIndex: 4, impuesto: "Ingresos Brutos", mes: 9, importe: 35000.00, estado: "PENDIENTE" },
+      { clienteIndex: 4, impuesto: "Ingresos Brutos ARBA", mes: 9, importe: 35000.00, estado: "PENDIENTE" },
       { clienteIndex: 5, impuesto: "Bienes Personales", mes: 10, importe: 8700.00, estado: "PAGADO" },
       { clienteIndex: 5, impuesto: "IVA", mes: 11, importe: 52000.00, estado: "PENDIENTE" },
       { clienteIndex: 6, impuesto: "Ganancias", mes: 0, importe: 8000.00, estado: "PENDIENTE" },

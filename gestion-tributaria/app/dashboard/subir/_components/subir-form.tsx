@@ -13,7 +13,10 @@ interface Cliente {
 
 interface Impuesto {
   id_impuesto: number;
-  formato: string | null; 
+  formato: string | null;
+  entidad_tributaria?: {
+    nombre: string | null;
+  } | null;
 }
 
 interface Props {
@@ -177,7 +180,12 @@ export default function SubirForm({ clientes, impuestos }: Props) {
               Tipo de Impuesto
             </label>
             <CustomSelect
-              options={impuestos.map((imp) => ({ value: String(imp.id_impuesto), label: imp.formato || "—" }))}
+              options={impuestos.map((imp) => ({
+                value: String(imp.id_impuesto),
+                label: `${imp.formato || "Sin nombre"}${
+                  imp.entidad_tributaria?.nombre ? ` - ${imp.entidad_tributaria.nombre}` : ""
+                }`,
+              }))}
               value={impuestoId}
               placeholder="Seleccionar Impuesto"
               onChange={(v) => setImpuestoId(v)}
