@@ -23,6 +23,7 @@ export default function ClientesTable({ clientes }: Props) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [confirmCuil, setConfirmCuil] = useState<string | null>(null);
+  const [confirmStep, setConfirmStep] = useState<"warn" | "confirm">("confirm");
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -55,7 +56,21 @@ export default function ClientesTable({ clientes }: Props) {
     }
   }
 
-  const confirmNombre = clientes.find((c) => c.cuil === confirmCuil)?.nombre ?? "";
+  const confirmCliente = clientes.find((c) => c.cuil === confirmCuil);
+  const confirmNombre = confirmCliente?.nombre ?? "";
+  const confirmTienePendiente = confirmCliente?.estado === "pendiente";
+
+  function abrirConfirm(cuil: string, estado: "al_dia" | "pendiente") {
+    setConfirmCuil(cuil);
+    setConfirmStep(estado === "pendiente" ? "warn" : "confirm");
+    setDeleteError(null);
+  }
+
+  function cerrarModal() {
+    setConfirmCuil(null);
+    setConfirmStep("confirm");
+    setDeleteError(null);
+  }
 
   return (
     <div>
@@ -137,7 +152,7 @@ export default function ClientesTable({ clientes }: Props) {
                     <div className="flex items-center justify-end gap-3">
                       <span className="text-xs font-semibold text-blue-600">Ver detalle</span>
                       <button
-                        onClick={(e) => { e.stopPropagation(); setConfirmCuil(c.cuil); }}
+                        onClick={(e) => { e.stopPropagation(); abrirConfirm(c.cuil, c.estado); }}
                         className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                         title="Eliminar cliente"
                       >
@@ -183,34 +198,69 @@ export default function ClientesTable({ clientes }: Props) {
       {confirmCuil && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
-            <div className="flex items-center justify-center h-12 w-12 rounded-full bg-red-50 mx-auto mb-4">
-              <Trash2 className="h-5 w-5 text-red-600" />
-            </div>
-            <h2 className="text-base font-bold text-slate-900 text-center mb-1">Eliminar cliente</h2>
-            <p className="text-sm text-slate-500 text-center mb-4">
-              ¿Estás segura de que querés eliminar a <span className="font-semibold text-slate-800">{confirmNombre}</span>? Esta acción no se puede deshacer.
-            </p>
-            {deleteError && (
-              <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2 mb-4 text-center">
-                {deleteError}
-              </p>
+
+            {confirmStep === "warn" ? (
+              <>
+                <div className="flex items-center justify-center h-12 w-12 rounded-full bg-amber-50 mx-auto mb-4">
+                  <AlertTriangle className="h-5 w-5 text-amber-500" />
+                </div>
+                <h2 className="text-base font-bold text-slate-900 text-center mb-1">Liquidaciones pendientes</h2>
+                <p className="text-sm text-slate-500 text-center mb-4">
+                  <span className="font-semibold text-slate-800">{confirmNombre}</span> tiene impuestos pendientes de pago. Si lo eliminás, se borrarán todos sus datos y liquidaciones permanentemente.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={cerrarModal}
+                    className="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => setConfirmStep("confirm")}
+                    className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-amber-500 rounded-xl hover:bg-amber-600 transition-colors"
+                  >
+                    Continuar igual
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center justify-center h-12 w-12 rounded-full bg-red-50 mx-auto mb-4">
+                  <Trash2 className="h-5 w-5 text-red-600" />
+                </div>
+                <h2 className="text-base font-bold text-slate-900 text-center mb-1">Eliminar cliente</h2>
+                <p className="text-sm text-slate-500 text-center mb-4">
+                  ¿Estás segura de que querés eliminar a <span className="font-semibold text-slate-800">{confirmNombre}</span>? Esta acción no se puede deshacer.
+                </p>
+                {confirmTienePendiente && (
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 mb-4 text-center">
+                    Se eliminarán también todas sus liquidaciones pendientes.
+                  </p>
+                )}
+                {deleteError && (
+                  <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2 mb-4 text-center">
+                    {deleteError}
+                  </p>
+                )}
+                <div className="flex gap-3">
+                  <button
+                    onClick={cerrarModal}
+                    disabled={deleting}
+                    className="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleEliminar}
+                    disabled={deleting}
+                    className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {deleting ? "Eliminando..." : "Eliminar"}
+                  </button>
+                </div>
+              </>
             )}
-            <div className="flex gap-3">
-              <button
-                onClick={() => { setConfirmCuil(null); setDeleteError(null); }}
-                disabled={deleting}
-                className="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleEliminar}
-                disabled={deleting}
-                className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-              >
-                {deleting ? "Eliminando..." : "Eliminar"}
-              </button>
-            </div>
+
           </div>
         </div>
       )}
