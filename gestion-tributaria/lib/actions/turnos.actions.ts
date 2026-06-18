@@ -4,7 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "../prisma";
 import { revalidatePath } from "next/cache";
 import { verificarRol } from "./auth.actions";
-import { enviarEmailTurno } from "../email";
+import { enviarEmailTurno } from "../notificaciones/turnos-email";
 
 //crear nuevo turno disponible (admin)
 export async function crearTurno(data: {

@@ -85,6 +85,7 @@ model liquidacion {
   numero_boleta_comprobante Int?         @unique
   url_archivo               String?
   vencimiento               DateTime?    @db.Date
+  recordatorio_vencimiento_enviado_en DateTime?
   cliente                   cliente?     @relation(fields: [cuil_cliente], references: [cuil], onDelete: NoAction, onUpdate: NoAction, map: "cuil_cliente")
   impuesto                  impuesto?    @relation(fields: [id_impuesto], references: [id_impuesto], onDelete: NoAction, onUpdate: NoAction, map: "id_impuesto")
   comprobante               comprobante? @relation(fields: [numero_boleta_comprobante], references: [numero_boleta], onDelete: NoAction, onUpdate: NoAction, map: "numero_boleta")
