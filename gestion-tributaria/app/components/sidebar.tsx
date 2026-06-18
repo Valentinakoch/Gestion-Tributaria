@@ -11,6 +11,7 @@ import {
   Building2,
   MessageCircle,
   Home,
+  Receipt,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -20,8 +21,9 @@ interface SidebarProps {
 const adminNav = [
   { href: "/dashboard/clientes", label: "Clientes", icon: Users },
   { href: "/dashboard/subir", label: "Subir Liquidación", icon: Upload },
-  { href: "/dashboard/liquidaciones", label: "Listado Liquidaciones", icon: FileText },
+  { href: "/dashboard/liquidaciones/admin", label: "Listado Liquidaciones", icon: FileText },
   { href: "/dashboard/entidades", label: "Entidades Tributarias", icon: Building2 },
+  { href: "/dashboard/impuestos", label: "Impuestos", icon: Receipt },
   { href: "/dashboard/turnos", label: "Turnos", icon: Calendar },
   { href: "/dashboard/chat", label: "Mensajes", icon: MessageCircle },
 ];

@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/vencimientos",
-      "schedule": "50 00 * * *"
+      "schedule": "00 11 * * *"
     }
   ]
 }

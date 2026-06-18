@@ -8,37 +8,38 @@ datasource db {
 
 model contador {
   cuil             BigInt            @id
-  clerk_id         String?           @unique
   id_estudio       Int?
-  nombre           String?
   apellido         String?
+  clerk_id         String?           @unique
   email            String?           @unique
+  nombre           String?
   telefono         String?
-  estudio_contable estudio_contable? @relation(fields: [id_estudio], references: [id_estudio], onDelete: NoAction, onUpdate: NoAction, map: "id_estudio")
   cliente          cliente[]
+  estudio_contable estudio_contable? @relation(fields: [id_estudio], references: [id_estudio], onDelete: NoAction, onUpdate: NoAction, map: "id_estudio")
   turno            turno[]
 }
 
 model cliente {
   cuil             BigInt            @id
-  clerk_id         String?           @unique
   id_estudio       Int?
   contador         BigInt?
-  nombre           String?
   apellido         String?
+  clerk_id         String?           @unique
   email            String?
+  nombre           String?
   telefono         String?
-  estudio_contable estudio_contable? @relation(fields: [id_estudio], references: [id_estudio], onDelete: NoAction, onUpdate: NoAction, map: "id_estudio")
   contadorRelacion contador?         @relation(fields: [contador], references: [cuil], onDelete: NoAction, onUpdate: NoAction, map: "contador_cliente")
+  estudio_contable estudio_contable? @relation(fields: [id_estudio], references: [id_estudio], onDelete: NoAction, onUpdate: NoAction, map: "id_estudio")
   inscripto_en     inscripto_en[]
   liquidacion      liquidacion[]
   turno            turno[]
 }
 
 model comprobante {
-  numero_boleta  Int           @id @default(autoincrement())
-  periodo_fiscal DateTime?     @db.Date
-  importe        Float?        @db.Real
+  numero_boleta  Int          @id @default(autoincrement())
+  periodo_fiscal DateTime?    @db.Date
+  importe        Float?       @db.Real
+  url_archivo    String?
   liquidacion    liquidacion?
 }
 
@@ -46,6 +47,7 @@ model entidad_tributaria {
   id_entidad   Int            @id @default(autoincrement())
   nombre       String?
   url          String?
+  impuesto     impuesto[]
   inscripto_en inscripto_en[]
 }
 
@@ -60,9 +62,11 @@ model estudio_contable {
 }
 
 model impuesto {
-  id_impuesto Int           @id @default(autoincrement())
-  formato     String?
-  liquidacion liquidacion[]
+  id_impuesto        Int                 @id @default(autoincrement())
+  formato            String?
+  id_entidad         Int?
+  entidad_tributaria entidad_tributaria? @relation(fields: [id_entidad], references: [id_entidad], onDelete: NoAction, onUpdate: NoAction, map: "id_entidad_impuesto")
+  liquidacion        liquidacion[]
 }
 
 model inscripto_en {
@@ -76,28 +80,28 @@ model inscripto_en {
 }
 
 model liquidacion {
-  numero_boleta             Int          @id @default(autoincrement())
-  periodo_fiscal            DateTime?    @db.Date
-  importe                   Float?       @db.Real
-  estado                    String?
-  cuil_cliente              BigInt?
-  id_impuesto               Int?
-  numero_boleta_comprobante Int?         @unique
-  url_archivo               String?
-  vencimiento               DateTime?    @db.Date
+  numero_boleta                       Int          @id @default(autoincrement())
+  periodo_fiscal                      DateTime?    @db.Date
+  importe                             Float?       @db.Real
+  estado                              String?
+  cuil_cliente                        BigInt?
+  id_impuesto                         Int?
+  numero_boleta_comprobante           Int?         @unique
+  url_archivo                         String?
+  vencimiento                         DateTime?    @db.Date
   recordatorio_vencimiento_enviado_en DateTime?
-  cliente                   cliente?     @relation(fields: [cuil_cliente], references: [cuil], onDelete: NoAction, onUpdate: NoAction, map: "cuil_cliente")
-  impuesto                  impuesto?    @relation(fields: [id_impuesto], references: [id_impuesto], onDelete: NoAction, onUpdate: NoAction, map: "id_impuesto")
-  comprobante               comprobante? @relation(fields: [numero_boleta_comprobante], references: [numero_boleta], onDelete: NoAction, onUpdate: NoAction, map: "numero_boleta")
+  cliente                             cliente?     @relation(fields: [cuil_cliente], references: [cuil], onDelete: NoAction, onUpdate: NoAction, map: "cuil_cliente")
+  impuesto                            impuesto?    @relation(fields: [id_impuesto], references: [id_impuesto], onDelete: NoAction, onUpdate: NoAction, map: "id_impuesto")
+  comprobante                         comprobante? @relation(fields: [numero_boleta_comprobante], references: [numero_boleta], onDelete: NoAction, onUpdate: NoAction, map: "numero_boleta")
 }
 
 model turno {
-  fecha         DateTime      @db.Date
-  hora          DateTime      @db.Time(0)
-  cuil_contador   BigInt
+  fecha         DateTime @db.Date
+  hora          DateTime @db.Time(0)
+  cuil_contador BigInt
   cuil_cliente  BigInt?
-  contador      contador      @relation(fields: [cuil_contador], references: [cuil], onDelete: NoAction, onUpdate: NoAction, map: "cuil_contador")
-  cliente       cliente?      @relation(fields: [cuil_cliente], references: [cuil], onDelete: NoAction, onUpdate: NoAction, map: "cuil_cliente")
+  cliente       cliente? @relation(fields: [cuil_cliente], references: [cuil], onDelete: NoAction, onUpdate: NoAction, map: "cuil_cliente")
+  contador      contador @relation(fields: [cuil_contador], references: [cuil], onDelete: NoAction, onUpdate: NoAction, map: "cuil_contador")
 
   @@id([fecha, hora, cuil_contador], map: "pk_turno")
 }
