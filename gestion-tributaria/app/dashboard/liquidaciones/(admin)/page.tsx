@@ -1,8 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { db } from "../../../lib/prisma";
+import { db } from "../../../../lib/prisma";
 import { FileText } from "lucide-react";
-import LiquidacionesList from "./_components/liquidaciones-list";
+import LiquidacionesList from "../_components/liquidaciones-list";
 
 export default async function LiquidacionesPage() {
   const { userId } = await auth();

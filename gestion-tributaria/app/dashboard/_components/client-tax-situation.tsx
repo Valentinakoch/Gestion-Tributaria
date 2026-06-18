@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { BarChart3, CheckCircle, AlertTriangle, ArrowLeft, CreditCard, ChevronLeft, ChevronRight, Search, Calendar } from "lucide-react";
 import CustomSelect from "@/components/custom-select";
@@ -21,7 +22,6 @@ interface Props {
 const PAGE_SIZE = 5;
 
 export default function ClientTaxSituation({ clienteName, liquidaciones }: Props) {
-  const [selectedLiquidacion, setSelectedLiquidacion] = useState<Liquidacion | null>(null);
   const [search, setSearch] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<string>("todos");
   const [filtroImpuesto, setFiltroImpuesto] = useState<string>("todos");
@@ -77,75 +77,6 @@ export default function ClientTaxSituation({ clienteName, liquidaciones }: Props
       pages.push(totalPages);
     }
     return pages;
-  }
-
-  if (selectedLiquidacion) {
-    return (
-      <div>
-      <header className="flex items-center gap-3 mb-8">
-        <div className="h-10 w-10 rounded-xl bg-brand-dark flex items-center justify-center text-white">
-          <BarChart3 className="h-5 w-5" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Detalle de Liquidación</h1>
-          <p className="text-sm text-slate-500">{selectedLiquidacion.impuesto}</p>
-        </div>
-      </header>
-
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 max-w-xl space-y-6">
-          <button
-            onClick={() => setSelectedLiquidacion(null)}
-            className="text-sm font-semibold text-blue-600 hover:underline flex items-center gap-1"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Volver al listado
-          </button>
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">
-              {selectedLiquidacion.impuesto} {selectedLiquidacion.periodo}
-            </h2>
-            <p className="text-xs text-slate-400">ID: {selectedLiquidacion.id}</p>
-          </div>
-          <div className="border-t pt-4 space-y-3">
-            <div className="flex justify-between">
-              <span className="text-slate-500 text-sm">Impuesto:</span>
-              <span className="font-medium text-slate-800">{selectedLiquidacion.impuesto}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500 text-sm">Período:</span>
-              <span className="font-medium text-slate-800">{selectedLiquidacion.periodo}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500 text-sm">Vencimiento:</span>
-              <span className="font-medium text-slate-800">{selectedLiquidacion.fechaVencimiento}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-500 text-sm">Estado:</span>
-              <span
-                className={`inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full ${
-                  selectedLiquidacion.estado === "PAGADO"
-                    ? "bg-emerald-50 text-emerald-700"
-                    : "bg-red-50 text-red-700"
-                }`}
-              >
-                {selectedLiquidacion.estado === "PAGADO" ? (
-                  <CheckCircle className="h-3 w-3" />
-                ) : (
-                  <AlertTriangle className="h-3 w-3" />
-                )}
-                {selectedLiquidacion.estado}
-              </span>
-            </div>
-            <div className="flex justify-between pt-3 border-t border-dashed">
-              <span className="text-slate-900 font-bold">Importe Total:</span>
-              <span className="text-lg font-bold text-slate-900">
-                ${selectedLiquidacion.monto.toLocaleString("es-AR")}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -286,12 +217,12 @@ export default function ClientTaxSituation({ clienteName, liquidaciones }: Props
                       )}
                       {liq.estado === "PAGADO" ? "Pagado" : "Pendiente"}
                     </span>
-                    <button
-                      onClick={() => setSelectedLiquidacion(liq)}
+                    <Link
+                      href={`/dashboard/liquidaciones/cliente/${liq.id}`}
                       className="text-xs font-semibold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 transition-colors"
                     >
                       Ver detalle
-                    </button>
+                    </Link>
                   </div>
                 </div>
               ))}

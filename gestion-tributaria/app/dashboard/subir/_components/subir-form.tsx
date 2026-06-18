@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { crearLiquidacion, validarLiquidacion } from "../../../../lib/actions/liquidaciones.actions";
+import { crearLiquidacion } from "../../../../lib/actions/liquidaciones.actions";
 import { User, Receipt, DollarSign, Calendar, Loader2, Upload, CheckCircle, AlertTriangle, ArrowLeft, FileText, X, ClipboardCheck } from "lucide-react";
 import CustomSelect from "@/components/custom-select";
 
@@ -13,24 +13,12 @@ interface Cliente {
 
 interface Impuesto {
   id_impuesto: number;
-  formato: string | null;
+  formato: string | null; 
 }
 
 interface Props {
   clientes: Cliente[];
   impuestos: Impuesto[];
-}
-
-interface Validacion {
-  cuilCliente: string;
-  nombreCliente: string;
-  idImpuesto: number;
-  tipoImpuesto: string;
-  monto: number;
-  periodo: string;
-  vencimiento: string;
-  nombreArchivo: string;
-  tamanoArchivo: string;
 }
 
 function formatMonto(raw: string): string {
@@ -63,7 +51,6 @@ export default function SubirForm({ clientes, impuestos }: Props) {
   const [subiendo, setSubiendo] = useState(false);
   const [archivo, setArchivo] = useState<File | null>(null);
   const [mensaje, setMensaje] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
-  const [validacion, setValidacion] = useState<Validacion | null>(null);
 
   function handleMontoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = e.target.value;
@@ -80,12 +67,13 @@ export default function SubirForm({ clientes, impuestos }: Props) {
     const file = e.target.files?.[0];
     if (file && file.type === "application/pdf") {
       setArchivo(file);
+      setMensaje(null);
     } else if (file) {
       setMensaje({ tipo: "error", texto: "Por favor, seleccioná un archivo PDF válido." });
     }
   }
 
-  async function handleValidar(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubiendo(true);
     setMensaje(null);
@@ -122,151 +110,34 @@ export default function SubirForm({ clientes, impuestos }: Props) {
 
     try {
       const fd = new FormData();
-      fd.append("cuilCliente", clienteId);
+      fd.append("cuilCliente", clienteId); 
       fd.append("idImpuesto", impuestoId);
       fd.append("monto", montoNumerico.toString());
       fd.append("periodo", periodoFormateado);
       fd.append("vencimiento", vencimiento);
       fd.append("archivo", archivo);
 
-      setMensaje({ tipo: "ok", texto: "Validando datos..." });
-      const res = await validarLiquidacion(fd);
+      const res = await crearLiquidacion(fd);
 
-      if (res.success && res.validacion) {
-        setValidacion(res.validacion);
-        setMensaje(null);
+      if (res.success) {
+        setMensaje({ tipo: "ok", texto: "Liquidación creada correctamente." });
+        setClienteId("");
+        setImpuestoId("");
+        setMontoDisplay("");
+        setPeriodo("");
+        setVencimiento("");
+        setArchivo(null);
       } else {
-        setMensaje({ tipo: "error", texto: res.error || "Error al validar la liquidación." });
+        setMensaje({ tipo: "error", texto: res.error || "Error al crear la liquidación." });
       }
-    } catch (error) {
-      console.error("Error en validación:", error);
-      setMensaje({ tipo: "error", texto: "Error inesperado al validar la liquidación." });
+    } catch (error: any) {
+      console.error("Error al crear:", error);
+      setMensaje({ tipo: "error", texto: error.message || "Error inesperado al crear la liquidación." });
     }
 
     setSubiendo(false);
   }
 
-  async function handleConfirmar() {
-    if (!validacion) return;
-    setSubiendo(true);
-    setMensaje(null);
-
-    const fd = new FormData();
-    fd.append("cuilCliente", validacion.cuilCliente);
-    fd.append("idImpuesto", String(validacion.idImpuesto));
-    fd.append("monto", String(validacion.monto));
-    fd.append("periodo", validacion.periodo);
-    fd.append("vencimiento", vencimiento);
-    fd.append("archivo", archivo!);
-
-    const res = await crearLiquidacion(fd);
-
-    if (res.success) {
-      setMensaje({ tipo: "ok", texto: "Liquidación creada correctamente." });
-      setValidacion(null);
-      setClienteId("");
-      setImpuestoId("");
-      setMontoDisplay("");
-      setPeriodo("");
-      setVencimiento("");
-      setArchivo(null);
-    } else {
-      setMensaje({ tipo: "error", texto: res.error || "Error al crear la liquidación." });
-    }
-
-    setSubiendo(false);
-  }
-
-  function handleCancelarValidacion() {
-    setValidacion(null);
-  }
-
-  // Si hay validación, mostrar resumen y confirmar
-  if (validacion) {
-    return (
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 space-y-6">
-          <div className="flex items-center gap-3 pb-2 border-b border-slate-100">
-            <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center">
-              <ClipboardCheck className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">Confirmación de Liquidación</h2>
-              <p className="text-xs text-slate-400">Revisá los datos antes de confirmar</p>
-            </div>
-          </div>
-
-          {mensaje && (
-            <div className={`flex items-center gap-2 p-3 rounded-xl text-sm font-medium ${mensaje.tipo === "ok" ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"}`}>
-              {mensaje.tipo === "ok" ? <CheckCircle className="h-4 w-4 shrink-0" /> : <AlertTriangle className="h-4 w-4 shrink-0" />} {mensaje.texto}
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 gap-4">
-            <div>
-              <p className="text-base font-medium text-slate-900 mt-1">{validacion.nombreCliente}</p>
-              <p className="text-xs text-slate-500 mt-0.5">CUIL: {validacion.cuilCliente}</p>
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Tipo de Impuesto</p>
-              <p className="text-base font-medium text-slate-900 mt-1">{validacion.tipoImpuesto}</p>
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Monto</p>
-              <p className="text-lg font-bold text-blue-600 mt-1">$ {validacion.monto.toLocaleString("es-AR", { minimumFractionDigits: 2 })}</p>
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Período Fiscal</p>
-              <p className="text-base font-medium text-slate-900 mt-1">{validacion.periodo}</p>
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Vencimiento</p>
-              <p className="text-base font-medium text-slate-900 mt-1">{validacion.vencimiento}</p>
-            </div>
-          </div>
-
-          <div className="flex gap-3">
-            <button
-              onClick={handleCancelarValidacion}
-              disabled={subiendo}
-              className="flex-1 bg-slate-200 text-slate-900 font-semibold rounded-xl px-6 py-3 hover:bg-slate-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Volver a Editar
-            </button>
-
-            <button
-              onClick={handleConfirmar}
-              disabled={subiendo}
-              className="flex-1 bg-emerald-600 text-white font-semibold rounded-xl px-6 py-3 hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {subiendo ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Guardando...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-4 w-4" />
-                  Confirmar y Guardar
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
-        <Link href="/dashboard" className="mt-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 transition-colors">
-          <ArrowLeft className="h-4 w-4" />
-          Volver al panel
-        </Link>
-      </div>
-    );
-  }
-
-  // Mostrar formulario de entrada
   return (
     <div className="max-w-xl mx-auto">
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 space-y-6">
@@ -286,7 +157,7 @@ export default function SubirForm({ clientes, impuestos }: Props) {
           </div>
         )}
 
-        <form onSubmit={handleValidar} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
               <User className="h-4 w-4 text-slate-400" />
@@ -406,12 +277,12 @@ export default function SubirForm({ clientes, impuestos }: Props) {
             {subiendo ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Validando...
+                Guardando Liquidación...
               </>
             ) : (
               <>
                 <ClipboardCheck className="h-4 w-4" />
-                Validar y Revisar
+                Crear Liquidación
               </>
             )}
           </button>
