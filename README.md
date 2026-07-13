@@ -63,7 +63,7 @@ La documentación incluye:
 📄 Disponible en:
 
 ```
-docs/Documentacion-Arquitectura-C4.pdf
+documentacion/Documentacion-Arquitectura-C4.pdf
 ```
 
 ---
